@@ -1,15 +1,17 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { Request, Response } from 'express';
-import { randomUUID } from 'node:crypto';
-import { logger } from './helpers/logs.js';
-import { TodoTools } from './tools.js';
+} from "@modelcontextprotocol/sdk/types.js";
+import { Request, Response } from "express";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { TransportsCache } from "./helpers/cache.js";
+import { logger } from "./helpers/logs.js";
+import { TodoTools } from "./tools.js";
 
-const log = logger('server');
+const log = logger("server");
 const JSON_ERROR = 500;
 
 export class SSEPServer {
@@ -23,33 +25,33 @@ export class SSEPServer {
   }
 
   async close() {
-    log.info('Shutting down server...');
+    log.info("Shutting down server...");
     await this.server.close();
-    log.info('Server shutdown complete.');
+    log.info("Server shutdown complete.");
   }
 
   async handleGetRequest(req: Request, res: Response) {
     log.info(`GET ${req.originalUrl} (${req.ip})`);
     try {
-      log.info('Connecting transport to server...');
-      this.transport = new SSEServerTransport('/messages', res);
-      this.transports[this.transport.sessionId] = this.transport;
+      log.info("Connecting transport to server...");
+      this.transport = new SSEServerTransport("/messages", res);
+      TransportsCache.set(this.transport.sessionId, this.transport);
 
-      res.on('close', () => {
+      res.on("close", () => {
         if (this.transport) {
-          delete this.transports[this.transport.sessionId];
+          TransportsCache.delete(this.transport.sessionId);
         }
       });
 
       await this.server.connect(this.transport);
-      log.success('Transport connected. Handling request...');
+      log.success("Transport connected. Handling request...");
     } catch (error) {
-      log.error('Error handling MCP request:', error);
+      log.error("Error handling MCP request:", error);
       if (!res.headersSent) {
         res
           .status(500)
-          .json(this.createJSONErrorResponse('Internal server error.'));
-        log.error('Responded with 500 Internal Server Error');
+          .json(this.createJSONErrorResponse("Internal server error."));
+        log.error("Responded with 500 Internal Server Error");
       }
     }
   }
@@ -57,16 +59,18 @@ export class SSEPServer {
   async handlePostRequest(req: Request, res: Response) {
     log.info(`POST ${req.originalUrl} (${req.ip}) - payload:`, req.body);
 
-    const transport = this.transports[req.query.sessionId as string];
+    const sessionId = req.query.sessionId as string;
+    const transport = TransportsCache.get(sessionId);
     if (transport) {
-      const sessionId = req.query.sessionId as string;
       await transport.handlePostMessage(req, res, req.body);
     } else {
-      log.error('Transport not initialized. Cannot handle POST request.');
+      log.error("Transport not initialized. Cannot handle POST request.");
       res
         .status(400)
         .json(
-          this.createJSONErrorResponse('No transport found for sessionId.')
+          this.createJSONErrorResponse(
+            "No transport found for sessionId=" + sessionId
+          )
         );
     }
   }
@@ -77,12 +81,30 @@ export class SSEPServer {
         tools: TodoTools,
       };
     });
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request, _extra) => {
-        return {};
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+
+      try {
+        const tool = TodoTools.find((tool) => tool.name === name);
+        if (!tool) {
+          log.error(`Tool "${name}" not found.`);
+          return this.createJSONErrorResponse(`Tool "${name}" not found.`);
+        }
+
+        const response = await tool.execute(args as any);
+
+        return { content: [{ type: "text", text: response }] };
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          throw new Error(
+            `Invalid arguments: ${error.errors
+              .map((e) => `${e.path.join(".")}: ${e.message}`)
+              .join(", ")}`
+          );
+        }
+        throw error;
       }
-    );
+    });
   }
 
   private createJSONErrorResponse(message: string) {
