@@ -17,10 +17,13 @@ urlFragment: mcp-container-ts
 -->
 # Getting Started with Remote MCP Servers using Azure Container Apps (Node.js/TypeScript)
 
+<p align="center">
+  <img src="./docs/ghcp-mcp-in-action.png" width="600" alt="MCP and GHCP in Action" />
+</p>
+
 This is a quick start guide to help you set up a remote MCP server using Azure Container Apps with Node.js and TypeScript. The guide assumes you have basic knowledge of Azure, Docker, and Node.js.
 
-
- Below is the architecture diagram for a typical MCP server setup:
+Below is the architecture diagram for a typical MCP server setup:
 
 
 ```mermaid
