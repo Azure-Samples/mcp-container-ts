@@ -16,3 +16,4 @@ tsconfig.tsbuildinfo
 *.db
 *.db-wal
 *.db-shm
+.azure
