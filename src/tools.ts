@@ -15,7 +15,7 @@ export const TodoTools = [
     outputSchema: { type: "string" },
     async execute({ title }: { title: string }) {
       const info = await addTodo(title);
-      return `Added TODO: ${info.title} (id: ${info.id})`;
+      return `Added TODO: ${title} (id: ${info.lastInsertRowid})`;
     },
   },
   {

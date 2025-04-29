@@ -1,7 +1,7 @@
 <!--
 ---
 name: Remote MCP with Azure Container Apps (Node.js/TypeScript/JavaScript)
-description: Run a remote MCP server on Azure Container Apps.  
+description: Run a remote node.js MCP server on Azure Container Apps.  
 languages:
 - typescript
 - javascript
@@ -40,7 +40,7 @@ flowchart TD
     OpenAI([OpenAI])
     server([MCP SSE Server])
     tools["fa:fa-wrench Tools"]
-    db[(Postgres DB)]
+    db[(Sqlite DB)]
 
     user --> hostGroup 
     subgraph hostGroup["MCP Host"]
@@ -87,11 +87,10 @@ flowchart TD
     class OpenAI dim
     class container highlight
 
-
 ```
 
 > [!IMPORTANT]
-> (*) This guide implements only the MCP server and Postgres database. The MCP host and clients are not provided. If you are looking for a complete solution, with an MCP host, client and both HTTP and SSE MCP servers please check out this other [repository](https://github.com/manekinekko/azure-container-apps-ai-mcp).
+> (*) This guide implements only the SSE MCP server. The MCP host and clients are not provided. If you are looking for a complete solution, with a custom MCP host, client and both HTTP and SSE MCP servers please check out this other [repository](https://github.com/manekinekko/azure-container-apps-ai-mcp).
 
 ## Getting Started
 
@@ -100,25 +99,8 @@ To get started with this project, follow the steps below:
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/en/download/) (version 23 or higher) and npm 
-- [Docker](https://docs.docker.com/get-started/get-docker/) (recommended for running the MCP servers, and Postgres in Docker)
+- [Docker](https://docs.docker.com/get-started/get-docker/) (recommended for running the MCP server)
 
-## Prepare your local environment
-
-A Postgres database is needed to store the TODO items. You can run Postgres in a Docker container or use an existing Postgres database. If you want to run it in a Docker container, you can use the following command:
-
-```bash
-docker compose up -d --build 'postgres'                                                                 
-```
-
-This will create a Docker container with Postgres running on port 5432. The MCP server will connect to this database to store the TODO items.
-
-Once the container is created and started, you should see the following output:
-
-```bash
-[+] Running 2/2
- ✔ Network mcp-container-ts_default        Created             0.0s 
- ✔ Container mcp-container-ts-postgres-1   Started             0.2s    
-```
 
 ## Run your MCP Server locally from the terminal
 
@@ -134,6 +116,9 @@ npm install
 ```bash
 npm start
 ```
+
+> [!NOTE]
+> On the first run, the server will create a local SQLite database file in the `./db/todo.db` folder. This database is used to store the state of the tools and their interactions with the MCP server.
 
 ## Use the local MCP server from within a desktop MCP Client
 

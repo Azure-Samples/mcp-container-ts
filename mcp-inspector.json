@@ -1,5 +1,5 @@
 {
-  "servers": {
+  "mcpServers": {
     "mcp-server-sse": {
       "type": "sse",
       "url": "http://localhost:3000/sse"

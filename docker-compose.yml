@@ -6,29 +6,9 @@ services:
       context: .
     ports:
       - '3000:3000'
-    environment:
-      # override the hostname provided in the .env file
-      - POSTGRES_HOST=host.docker.internal
     env_file:
       - ./.env
     depends_on:
       - postgres
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=todos
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d todos"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
 volumes:
   pgdata:

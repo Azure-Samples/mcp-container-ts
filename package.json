@@ -7,7 +7,7 @@
     "start": "tsx src/index.ts",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "inspect": "mcp-inspector"
+    "inspect": "mcp-inspector --config ./mcp-inspector.json --server mcp-server-sse"
   },
   "keywords": [
     "modelcontextprotocol",
@@ -16,24 +16,23 @@
     "sse"
   ],
   "license": "MIT",
-  "description": "An MCP server that implements SSE and communicates with a Postgres database.",
+  "description": "An MCP server that implements SSE and communicates with a local sqlite database.",
   "dependencies": {
     "@azure/identity": "^4.9.1",
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "better-sqlite3": "^11.9.1",
     "chalk": "^5.4.1",
     "debug": "^4.4.0",
-    "dotenv": "^16.5.0",
     "express": "^5.0.1",
-    "pg": "^8.15.5",
     "type": "^2.7.3",
     "zod": "^3.24.3"
   },
   "devDependencies": {
     "@modelcontextprotocol/inspector": "^0.10.2",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/debug": "^4.1.12",
     "@types/express": "^5.0.0",
     "@types/node": "^20.11.24",
-    "@types/pg": "^8.11.14",
     "tsx": "^4.19.3",
     "typescript": "^5.3.3"
   },
