@@ -5,12 +5,7 @@ param location string = resourceGroup().location
 param tags object = {}
 
 
-@secure()
-param postgresDatabasePassword string
 param mcpContainerTsExists bool
-
-@description('Id of the user or app to assign application roles')
-param principalId string
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
@@ -55,33 +50,6 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5
     zoneRedundant: false
   }
 }
-var postgresDatabaseName = 'todos'
-var postgresDatabaseUser = 'postgres'
-module postgresServer 'br/public:avm/res/db-for-postgre-sql/flexible-server:0.1.4' = {
-  name: 'postgresServer'
-  params: {
-    name: '${abbrs.dBforPostgreSQLServers}${resourceToken}'
-    skuName: 'Standard_B1ms'
-    tier: 'Burstable'
-    administratorLogin: postgresDatabaseUser
-    administratorLoginPassword: postgresDatabasePassword
-    geoRedundantBackup: 'Disabled'
-    passwordAuth:'Enabled'
-    firewallRules: [
-      {
-        name: 'AllowAllIps'
-        startIpAddress: '0.0.0.0'
-        endIpAddress: '255.255.255.255'
-      }
-    ]
-    databases: [
-      {
-        name: postgresDatabaseName
-      }
-    ]
-    location: location
-  }
-}
 
 module mcpContainerTsIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
   name: 'mcpContainerTsidentity'
@@ -107,16 +75,7 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.8.0' = {
     scaleMinReplicas: 1
     scaleMaxReplicas: 1
     secrets: {
-      secureList:  [
-        {
-          name: 'postgres-password'
-          value: postgresDatabasePassword
-        }
-        {
-          name: 'db-url'
-          value: 'postgresql://${postgresDatabaseUser}:${postgresDatabasePassword}@${postgresServer.outputs.fqdn}:5432/${postgresDatabaseName}'
-        }
-      ]
+    
     }
     containers: [
       {
@@ -134,38 +93,6 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.8.0' = {
           {
             name: 'AZURE_CLIENT_ID'
             value: mcpContainerTsIdentity.outputs.clientId
-          }
-          {
-            name: 'POSTGRES_HOST'
-            value: postgresServer.outputs.fqdn
-          }
-          {
-            name: 'POSTGRES_USERNAME'
-            value: postgresDatabaseUser
-          }
-          {
-            name: 'POSTGRES_DATABASE'
-            value: postgresDatabaseName
-          }
-          {
-            name: 'POSTGRES_PASSWORD'
-            secretRef: 'postgres-password'
-          }
-          {
-            name: 'POSTGRES_PORT'
-            value: '5432'
-          }
-          {
-            name: 'USE_POSTGRES_CONNECTION_STRING'
-            value: 'true'
-          }
-          {
-            name: 'AZURE_KEY_VAULT_NAME'
-            value: keyVault.outputs.name
-          }
-          {
-            name: 'AZURE_KEY_VAULT_ENDPOINT'
-            value: keyVault.outputs.uri
           }
           {
             name: 'PORT'
@@ -189,39 +116,6 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.8.0' = {
     tags: union(tags, { 'azd-service-name': 'mcp-container-ts' })
   }
 }
-// Create a keyvault to store secrets
-module keyVault 'br/public:avm/res/key-vault/vault:0.12.0' = {
-  name: 'keyvault'
-  params: {
-    name: '${abbrs.keyVaultVaults}${resourceToken}'
-    location: location
-    tags: tags
-    enableRbacAuthorization: false
-    accessPolicies: [
-      {
-        objectId: principalId
-        permissions: {
-          secrets: [ 'get', 'list', 'set' ]
-        }
-      }
-      {
-        objectId: mcpContainerTsIdentity.outputs.principalId
-        permissions: {
-          secrets: [ 'get', 'list' ]
-        }
-      }
-    ]
-    secrets: [
-      {
-        name: 'postgres-password'
-        value: postgresDatabasePassword
-      }
-    ]
-  }
-}
+
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_RESOURCE_MCP_CONTAINER_TS_ID string = mcpContainerTs.outputs.resourceId
-output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.uri
-output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
-output AZURE_RESOURCE_VAULT_ID string = keyVault.outputs.resourceId
-output AZURE_RESOURCE_TODOS_ID string = '${postgresServer.outputs.resourceId}/databases/todos'

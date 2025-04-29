@@ -9,12 +9,7 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-@secure()
-param postgresDatabasePassword string
 param mcpContainerTsExists bool
-
-@description('Id of the user or app to assign application roles')
-param principalId string
 
 // Tags that should be applied to all resources.
 // 
@@ -38,15 +33,9 @@ module resources 'resources.bicep' = {
   params: {
     location: location
     tags: tags
-    principalId: principalId
-    postgresDatabasePassword: postgresDatabasePassword
     mcpContainerTsExists: mcpContainerTsExists
   }
 }
 
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
 output AZURE_RESOURCE_MCP_CONTAINER_TS_ID string = resources.outputs.AZURE_RESOURCE_MCP_CONTAINER_TS_ID
-output AZURE_KEY_VAULT_ENDPOINT string = resources.outputs.AZURE_KEY_VAULT_ENDPOINT
-output AZURE_KEY_VAULT_NAME string = resources.outputs.AZURE_KEY_VAULT_NAME
-output AZURE_RESOURCE_VAULT_ID string = resources.outputs.AZURE_RESOURCE_VAULT_ID
-output AZURE_RESOURCE_TODOS_ID string = resources.outputs.AZURE_RESOURCE_TODOS_ID

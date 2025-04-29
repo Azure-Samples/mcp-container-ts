@@ -178,7 +178,48 @@ http://localhost:3000/sse
 
 ## Deploy to Azure Container Apps
 
-See [PR](https://github.com/Azure-Samples/mcp-container-ts/pull/2)
+1. Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) (azd)
+
+ 
+2. Log in to your Azure account
+
+```bash
+azd auth login
+```
+
+3. Provision and deploy the project:
+  
+```bash 
+azd up
+```
+4. Once the deployment is complete, you can access the MCP server using the URL provided in the output. The URL will look something like this:
+
+```bash
+https://<env-name>.<container-id>.<region>.azurecontainerapps.io
+```
+
+5. You can configure the MCP server in your local VS Code environment by adding the URL to the `mcp.json` file or manually adding it as described in the previous section:
+
+```json
+{
+  "servers": {
+    "mcp-server-sse-remote": {
+      "type": "sse",
+      "url": "https://<your-app-name>.<region>.azurecontainerapps.io/sse"
+    }
+  }
+}
+```
+
+> [!NOTE]
+> The URL for the MCP server will be different for each deployment. Make sure to update the URL in the `mcp.json` file or in your MCP client configuration accordingly.
+ 
+
+6. If you were simply testing the deployment, you can remove and clean up all deployed resources by running the following command to avoid incurring any costs:
+
+```bash
+azd down
+```
 
 ## Next Steps
 

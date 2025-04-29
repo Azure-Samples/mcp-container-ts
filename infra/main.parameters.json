@@ -8,9 +8,6 @@
       "location": {
         "value": "${AZURE_LOCATION}"
       },
-      "postgresDatabasePassword": {
-        "value": "$(secretOrRandomPassword ${AZURE_KEY_VAULT_NAME} postgres)"
-      },
       "mcpContainerTsExists": {
         "value": "${SERVICE_MCP_CONTAINER_TS_RESOURCE_EXISTS=false}"
       },
