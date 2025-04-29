@@ -118,7 +118,7 @@ npm start
 ```
 
 > [!NOTE]
-> On the first run, the server will create a local SQLite database file in the `./db/todo.db` folder. This database is used to store the state of the tools and their interactions with the MCP server.
+> When the applications starts, the server will create an [in-memory SQLite](https://www.sqlite.org/inmemorydb.html) database. This database is used to store the state of the tools and their interactions with the MCP server.
 
 ## Use the local MCP server from within a desktop MCP Client
 

@@ -3,7 +3,7 @@ import { logger } from "./helpers/logs.js";
 
 const log = logger("db");
 const DB_NAME = "todos";
-const db = new Database(".db/todo.db", {
+const db = new Database(":memory:", {
   verbose: log.info,
 });
 
