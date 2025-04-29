@@ -92,19 +92,53 @@ flowchart TD
 > [!IMPORTANT]
 > (*) This guide implements only the SSE MCP server. The MCP host and clients are not provided. If you are looking for a complete solution, with a custom MCP host, client and both HTTP and SSE MCP servers please check out this other [repository](https://github.com/manekinekko/azure-container-apps-ai-mcp).
 
-## Getting Started
+## Getting started
 
-To get started with this project, follow the steps below:
+You have a few options for getting started with this template.
+The quickest way to get started is GitHub Codespaces, since it will setup all the tools for you, but you can also [set it up locally](#local-environment).
 
-## Prerequisites
+### GitHub Codespaces
 
+You can run this template virtually by using GitHub Codespaces. The button will open a web-based VS Code instance in your browser:
+
+1. Open the template (this may take several minutes):
+
+    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Azure-Samples/mcp-container-ts)
+
+2. Open a terminal window
+3. Continue with the [deploying steps](#deploying)
+
+### VS Code Dev Containers
+
+A related option is VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+1. Start Docker Desktop (install it if not already installed)
+2. Open the project:
+
+    [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Azure-Samples/mcp-container-ts)
+
+3. Open a terminal window
+
+### Local Environment
+
+If you prefer to run the MCP server locally, you can do so by following these steps:
+
+#### Prerequisites
+
+You need to have the following tools installed on your local machine:
 - [Node.js](https://nodejs.org/en/download/) (version 23 or higher) and npm 
 - [Docker](https://docs.docker.com/get-started/get-docker/) (recommended for running the MCP server)
 
 
-## Run your MCP Server locally from the terminal
+1. Clone this repository:
 
-1. Clone this repository.
+```bash
+git clone https://github.com/Azure-Samples/mcp-container-ts
+cd mcp-container-ts
+```
+
+2. Open the project folder
+
 2. Install dependencies
 
 ```bash
@@ -120,11 +154,12 @@ npm start
 > [!NOTE]
 > When the applications starts, the server will create an [in-memory SQLite](https://www.sqlite.org/inmemorydb.html) database. This database is used to store the state of the tools and their interactions with the MCP server.
 
-## Use the local MCP server from within a desktop MCP Client
+## Use the local MCP server with desktop MCP Clients
 
 ### Option 1 - Use the mcp.json file in VS Code
 
 The quickest way to connect to the MCP server is the use the provided [mcp.json](.vscode/mcp.json) configuration file to set up the MCP server in your VS Code environment. This configuration file contains the necessary settings for the MCP server, including the URL and transport type.
+
 ```json
 {
   "servers": {
