@@ -4,6 +4,7 @@ import { logger } from './helpers/logs.js';
 import { SSEPServer } from './server.js';
 
 const log = logger('index');
+const FAKE_TOKEN = 'abc';
 
 const server = new SSEPServer(
   new Server(
@@ -24,13 +25,26 @@ app.use(express.json());
 
 const router = express.Router();
 
+// Authorization middleware
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const auth = req.headers["Authorization"] || req.headers["authorization"];
+  if (auth !== `Bearer ${FAKE_TOKEN}`) {
+    log.error('Client not authorized');
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  log.success('Client authorized');
+  next();
+}
+
 // Legacy message endpoint for older clients
-router.post('/messages', async (req: Request, res: Response) => {
+router.post('/messages', requireAuth, async (req: Request, res: Response) => {
   await server.handlePostRequest(req, res);
 });
 
 // Legacy SSE endpoint for older clients
-router.get('/sse', async (req: Request, res: Response) => {
+router.get('/sse', requireAuth, async (req: Request, res: Response) => {
   await server.handleGetRequest(req, res);
 });
 
