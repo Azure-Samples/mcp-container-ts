@@ -26,7 +26,7 @@ app.use(express.json());
 const router = express.Router();
 
 // Authorization middleware
-function requireAuth(req: Request, res: Response, next: () => void) {
+function requireAuth(req: Request, res: Response, next: NextFunction) {
   const auth = req.headers["Authorization"] || req.headers["authorization"];
   if (auth !== `Bearer ${FAKE_TOKEN}`) {
     log.error('Client not authorized');
