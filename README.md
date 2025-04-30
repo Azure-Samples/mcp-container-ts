@@ -232,7 +232,7 @@ npm run inspect
 
 2. CTRL click to load the MCP Inspector web app from the URL displayed by the app (e.g. http://0.0.0.0:5173/#resources)
 3. Set the transport type to SSE
-4. Add authentication header: `Authorization` and Breaer token: `abc`.
+4. Add authentication header: `Authorization` and Bearer token: `abc`.
 4. Set the URL to your running server's SSE endpoint and Connect:
 ```bash
 http://localhost:3000/sse
