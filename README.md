@@ -167,10 +167,21 @@ The quickest way to connect to the MCP server is the use the provided [mcp.json]
 
 ```json
 {
+  "inputs": [
+    {
+      "password": true,
+      "id": "mcp-server-sse-token",
+      "description": "Enter the token for the SSE server",
+      "type": "promptString",
+    }
+  ],
   "servers": {
     "mcp-server-sse": {
       "type": "sse",
-      "url": "http://localhost:3000/sse"
+      "url": "http://localhost:3000/sse",
+      "headers": {
+        "Authorization": "Bearer ${input:mcp-server-sse-token}"
+      }
     }
   }
 }
@@ -178,13 +189,24 @@ The quickest way to connect to the MCP server is the use the provided [mcp.json]
 
 Once you have this file opened, you can click on the "start" inlined action button that will connect the MCP server and fetch the available tools.
 
+**IMPORTANT:** Because the server is secured with a token, you will be prompted by VS Code to enter the token. The demo token we are using is`abc`.
+
+> [!NOTE]
+> In a real world scenario, you would want to validate the token and use a more secure method of authentication. This is just a demo token for testing purposes. Learn more about to secure your server [here](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-vs-authorization).
+
 
 ### Option 2 - Manually Adding MCP Server to VS Code
 
-1. Add MCP Server from command palette and add URL to your running Function app's SSE endpoint:
+1. Add MCP Server from command palette and add URL to your running server's SSE endpoint:
 
+For local development, the URL will be:
 ```bash
 http://localhost:3000/sse
+```
+
+For Azure Container Apps, the URL will be:
+```bash
+https://<your-app-name>.<region>.azurecontainerapps.io/sse
 ```
 
 2. Select HTTP (Server-Sent-Events) for the type of MCP server to add.
@@ -210,11 +232,14 @@ npm run inspect
 
 2. CTRL click to load the MCP Inspector web app from the URL displayed by the app (e.g. http://0.0.0.0:5173/#resources)
 3. Set the transport type to SSE
-4. Set the URL to your running Function app's SSE endpoint and Connect:
+4. Add authentication header: `Authorization` and Breaer token: `abc`.
+4. Set the URL to your running server's SSE endpoint and Connect:
 ```bash
 http://localhost:3000/sse
 ```
 5. List Tools. Click on a tool and Run Tool.
+
+![alt](./docs/mcp-inspector.png)
 
 ## Deploy to Azure Container Apps
 
@@ -238,14 +263,25 @@ azd up
 https://<env-name>.<container-id>.<region>.azurecontainerapps.io
 ```
 
-5. You can configure the MCP server in your local VS Code environment by adding the URL to the `mcp.json` file or manually adding it as described in the previous section:
+5. You can configure the MCP server in your local VS Code environment by adding the URL to the `mcp.json` file or manually adding it as described in the section below:
 
 ```json
 {
+  "inputs": [
+    {
+      "password": true,
+      "id": "mcp-server-sse-token",
+      "description": "Enter the token for the SSE server",
+      "type": "promptString"
+    }
+  ],
   "servers": {
     "mcp-server-sse-remote": {
       "type": "sse",
-      "url": "https://<your-app-name>.<region>.azurecontainerapps.io/sse"
+      "url": "https://<your-app-name>.<region>.azurecontainerapps.io/sse",
+      "headers": {
+        "Authorization": "Bearer ${input:mcp-server-sse-token}"
+      }
     }
   }
 }
@@ -258,9 +294,12 @@ https://<env-name>.<container-id>.<region>.azurecontainerapps.io
 6. If you were simply testing the deployment, you can remove and clean up all deployed resources by running the following command to avoid incurring any costs:
 
 ```bash
-azd down
+azd down --purge --force
 ```
 
 ## Next Steps
 
+- Learn more about [Model Context Protocol](https://modelcontextprotocol.io/)
 - Learn more about [related MCP efforts from Microsoft](https://github.com/microsoft/mcp)
+- Learn more about [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/)
+- Learn more about [Azure AI Foundry](https://ai.azure.com)
