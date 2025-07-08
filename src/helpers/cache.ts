@@ -1,3 +1,3 @@
-import type { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse";
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
-export const TransportsCache = new Map<string, SSEServerTransport>();
+export const TransportsCache = new Map<string, StreamableHTTPServerTransport>();

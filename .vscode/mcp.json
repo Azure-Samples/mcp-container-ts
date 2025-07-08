@@ -1,27 +1,26 @@
 {
-  "inputs": [
-    {
-      "password": true,
-      "id": "mcp-server-sse-token",
-      "description": "Enter the token for the SSE server",
-      "type": "promptString",
-    }
-  ],
-  "servers": {
-    "mcp-server-sse": {
-      "type": "sse",
-      "url": "http://localhost:3000/sse",
-      "headers": {
-        "Authorization": "Bearer ${input:mcp-server-sse-token}"
-      }
-    },
-
-    "mcp-server-sse-remote": {
-      "type": "sse",
-      "url": "https://mcp-container-ts.kindsand-78aa4194.swedencentral.azurecontainerapps.io/sse",
-      "headers": {
-        "Authorization": "Bearer ${input:mcp-server-sse-token}"
-      }
-    }
-  }
+	"servers": {
+		"mcp-server-remote": {
+			"type": "http",
+			"url": "https://<env-name>.<container-id>.<region>.azurecontainerapps.io/mcp",
+			"headers": {
+				"Authorization": "Bearer ${input:mcp-server-token}"
+			}
+		},
+		"mcp-server": {
+			"type": "http",
+			"url": "http://localhost:3000/mcp",
+			"headers": {
+				"Authorization": "Bearer ${input:mcp-server-token}"
+			}
+		}
+	},
+	"inputs": [
+		{
+			"password": true,
+			"id": "mcp-server-token",
+			"description": "Enter the token for the MCP server",
+			"type": "promptString"
+		}
+	]
 }

@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "mcp-server-sse": {
-      "type": "sse",
-      "url": "http://localhost:3000/sse"
+    "mcp-server": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp"
     },
-    
-    "mcp-server-sse-remote": {
-      "type": "sse",
-      "url": "https://<container-id>.<location>.azurecontainerapps.io/sse"
+
+    "mcp-server-remote": {
+      "type": "http",
+      "url": "https://<env-name>.<container-id>.<region>.azurecontainerapps.io/mcp"
     }
   }
 }

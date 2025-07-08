@@ -7,19 +7,21 @@
     "start": "tsx src/index.ts",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "inspect": "mcp-inspector --config ./mcp-inspector.json --server mcp-server-sse"
+    "inspect": "mcp-inspector --config ./mcp-inspector.json --server mcp-server"
   },
   "keywords": [
     "modelcontextprotocol",
     "mcp",
     "mcp-server",
-    "sse"
+    "streamable-http",
+    "sqlite",
+    "express"    
   ],
   "license": "MIT",
-  "description": "An MCP server that implements SSE and communicates with a local sqlite database.",
+  "description": "An MCP server that implements Streamable HTTP and communicates with a local sqlite database.",
   "dependencies": {
     "@azure/identity": "^4.9.1",
-    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@modelcontextprotocol/sdk": "^1.15.0",
     "better-sqlite3": "^11.9.1",
     "chalk": "^5.4.1",
     "debug": "^4.4.0",
@@ -28,7 +30,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@modelcontextprotocol/inspector": "^0.10.2",
+    "@modelcontextprotocol/inspector": "^0.15.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/debug": "^4.1.12",
     "@types/express": "^5.0.0",

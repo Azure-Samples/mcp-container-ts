@@ -1,7 +1,7 @@
 name: mcp-container-ts
 services:
 
-  mcp-server-sse:
+  mcp-server:
     build:
       context: .
     ports:

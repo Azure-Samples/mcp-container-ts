@@ -1,23 +1,24 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
+  JSONRPCError,
+  JSONRPCNotification,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { Request, Response } from "express";
-import { randomUUID } from "node:crypto";
-import { z } from "zod";
-import { TransportsCache } from "./helpers/cache.js";
-import { logger } from "./helpers/logs.js";
-import { TodoTools } from "./tools.js";
+  LoggingMessageNotification,
+  Notification,
+} from '@modelcontextprotocol/sdk/types.js';
+import { Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
+import { logger } from './helpers/logs.js';
+import { TodoTools } from './tools.js';
 
-const log = logger("server");
-const JSON_ERROR = 500;
+const log = logger('server');
+const JSON_RPC = '2.0';
+const JSON_RPC_ERROR = -32603;
 
-export class SSEPServer {
+export class StreamableHTTPServer {
   server: Server;
-  transport: SSEServerTransport | null = null;
-  transports: Record<string, SSEServerTransport> = {};
 
   constructor(server: Server) {
     this.server = server;
@@ -25,92 +26,121 @@ export class SSEPServer {
   }
 
   async close() {
-    log.info("Shutting down server...");
+    log.info('Shutting down server...');
     await this.server.close();
-    log.info("Server shutdown complete.");
+    log.info('Server shutdown complete.');
   }
 
   async handleGetRequest(req: Request, res: Response) {
-    log.info(`GET ${req.originalUrl} (${req.ip})`);
-    try {
-      log.info("Connecting transport to server...");
-      this.transport = new SSEServerTransport("/messages", res);
-      TransportsCache.set(this.transport.sessionId, this.transport);
-
-      res.on("close", () => {
-        if (this.transport) {
-          TransportsCache.delete(this.transport.sessionId);
-        }
-      });
-
-      await this.server.connect(this.transport);
-      log.success("Transport connected. Handling request...");
-    } catch (error) {
-      log.error("Error handling MCP request:", error);
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json(this.createJSONErrorResponse("Internal server error."));
-        log.error("Responded with 500 Internal Server Error");
-      }
-    }
+    res.status(405).json(this.createRPCErrorResponse('Method not allowed.'));
+    log.info('Responded to GET with 405 Method Not Allowed');
   }
 
   async handlePostRequest(req: Request, res: Response) {
     log.info(`POST ${req.originalUrl} (${req.ip}) - payload:`, req.body);
+    try {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
 
-    const sessionId = req.query.sessionId as string;
-    const transport = TransportsCache.get(sessionId);
-    if (transport) {
-      await transport.handlePostMessage(req, res, req.body);
-    } else {
-      log.error("Transport not initialized. Cannot handle POST request.");
-      res
-        .status(400)
-        .json(
-          this.createJSONErrorResponse(
-            "No transport found for sessionId=" + sessionId
-          )
-        );
+      log.info('Connecting transport to server...');
+
+      await this.server.connect(transport);
+      log.success('Transport connected. Handling request...');
+
+      await transport.handleRequest(req, res, req.body);
+      res.on('close', () => {
+        log.success('Request closed by client');
+        transport.close();
+        this.server.close();
+      });
+
+      await this.sendMessages(transport);
+      log.success(
+        `POST request handled successfully (status=${res.statusCode})`
+      );
+    } catch (error) {
+      log.error('Error handling MCP request:', error);
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json(this.createRPCErrorResponse('Internal server error.'));
+        log.error('Responded with 500 Internal Server Error');
+      }
     }
   }
 
   private setupServerRequestHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async (_request) => {
       return {
+        jsonrpc: JSON_RPC,
         tools: TodoTools,
       };
     });
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
+    this.server.setRequestHandler(
+      CallToolRequestSchema,
+      async (request, _extra) => {
+        const args = request.params.arguments;
+        const toolName = request.params.name;
+        const tool = TodoTools.find((tool) => tool.name === toolName);
 
-      try {
-        const tool = TodoTools.find((tool) => tool.name === name);
+        log.info(`Handling CallToolRequest for tool: ${toolName}`);
+
         if (!tool) {
-          log.error(`Tool "${name}" not found.`);
-          return this.createJSONErrorResponse(`Tool "${name}" not found.`);
+          log.error(`Tool ${toolName} not found.`);
+          return this.createRPCErrorResponse(`Tool ${toolName} not found.`);
         }
-
-        const response = await tool.execute(args as any);
-
-        return { content: [{ type: "text", text: response }] };
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw new Error(
-            `Invalid arguments: ${error.errors
-              .map((e) => `${e.path.join(".")}: ${e.message}`)
-              .join(", ")}`
+        try {
+          const result = await tool.execute(args as any);
+          log.success(`Tool ${toolName} executed. Result:`, result);
+          return {
+            jsonrpc: JSON_RPC,
+            content: [
+              {
+                type: 'text',
+                text: `Tool ${toolName} executed with arguments ${JSON.stringify(
+                  args
+                )}. Result: ${JSON.stringify(result)}`,
+              },
+            ],
+          };
+        }
+        catch (error) {
+          log.error(`Error executing tool ${toolName}:`, error);
+          return this.createRPCErrorResponse(
+            `Error executing tool ${toolName}: ${error}`
           );
         }
-        throw error;
       }
-    });
+    );
   }
 
-  private createJSONErrorResponse(message: string) {
+  private async sendMessages(transport: StreamableHTTPServerTransport) {
+    const message: LoggingMessageNotification = {
+      method: 'notifications/message',
+      params: { level: 'info', data: 'Connection established' },
+    };
+    log.info('Sending connection established notification.');
+    this.sendNotification(transport, message);
+  }
+
+  private async sendNotification(
+    transport: StreamableHTTPServerTransport,
+    notification: Notification
+  ) {
+    const rpcNotificaiton: JSONRPCNotification = {
+      ...notification,
+      jsonrpc: JSON_RPC,
+    };
+    log.info(`Sending notification: ${notification.method}`);
+    await transport.send(rpcNotificaiton);
+  }
+
+  private createRPCErrorResponse(message: string): JSONRPCError {
     return {
+      jsonrpc: JSON_RPC,
       error: {
-        code: JSON_ERROR,
+        code: JSON_RPC_ERROR,
         message: message,
       },
       id: randomUUID(),

@@ -31,12 +31,12 @@
                 }
             }
         },
-        "/sse": {
+        "/mcp": {
             "get": {
                 "tags": ["MCP"],
-                "summary": "sse",
-                "description": "sse",
-                "operationId": "sse",
+                "summary": "mcp",
+                "description": "mcp",
+                "operationId": "mcp",
                 "parameters": [{
                     "name": "Content-Type",
                     "in": "header",
