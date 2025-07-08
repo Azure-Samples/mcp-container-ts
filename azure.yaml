@@ -2,7 +2,7 @@
 
 name: mcp-container-ts
 metadata:
-    template: azd-init@1.14.0
+    template: mcp-container-ts@0.1.0
 services:
     mcp-container-ts:
         project: .

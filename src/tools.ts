@@ -1,27 +1,33 @@
-import { addTodo, listTodos, completeTodo, deleteTodo } from "./db.js";
+import {
+  addTodo,
+  listTodos,
+  completeTodo,
+  deleteTodo,
+  updateTodoText,
+} from "./db.js";
 
 export const TodoTools = [
   {
-    name: "add_todo",
+    name: "addTodo",
     description:
-      "Add a new TODO item to the list. Provide a title for the task you want to add. Returns a confirmation message with the new TODO id.",
+      "Add a new TODO item to the list. Provide a text for the task you want to add. Returns a confirmation message with the new TODO id.",
     inputSchema: {
       type: "object",
       properties: {
-        title: { type: "string" },
+        text: { type: "string" },
       },
-      required: ["title"],
+      required: ["text"],
     },
     outputSchema: { type: "string" },
-    async execute({ title }: { title: string }) {
-      const info = await addTodo(title);
-      return `Added TODO: ${title} (id: ${info.lastInsertRowid})`;
+    async execute({ text }: { text: string }) {
+      const info = await addTodo(text);
+      return `Added TODO: ${text} (id: ${info.lastInsertRowid})`;
     },
   },
   {
-    name: "list_todos",
+    name: "listTodos",
     description:
-      "List all TODO items. Returns a formatted list of all tasks with their ids, titles, and completion status.",
+      "List all TODO items. Returns a formatted list of all tasks with their ids, texts, and completion status.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -34,12 +40,12 @@ export const TodoTools = [
         return "No TODOs found.";
       }
       return tools
-        .map((t) => `${t.id}. ${t.title} [${t.completed ? "x" : " "}]`)
+        .map((t) => `${t.id}. ${t.text} [${t.completed ? "x" : " "}]`)
         .join("\n");
     },
   },
   {
-    name: "complete_todo",
+    name: "completeTodo",
     description:
       "Mark a TODO item as completed. Provide the id of the task to mark as done. Returns a confirmation message or an error if the id does not exist.",
     inputSchema: {
@@ -59,7 +65,7 @@ export const TodoTools = [
     },
   },
   {
-    name: "delete_todo",
+    name: "deleteTodo",
     description:
       "Delete a TODO item from the list. Provide the id of the task to delete. Returns a confirmation message or an error if the id does not exist.",
     inputSchema: {
@@ -75,7 +81,27 @@ export const TodoTools = [
       if (!row) {
         return `TODO with id ${id} not found.`;
       }
-      return `Deleted TODO: ${row.title} (id: ${id})`;
+      return `Deleted TODO: ${row.text} (id: ${id})`;
+    },
+  },
+  {
+    name: "updateTodoText",
+    description: "Update the text of a todo",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "number" },
+        text: { type: "string" },
+      },
+      required: ["id"],
+    },
+    outputSchema: { type: "string" },
+    async execute({ id, text }: { id: number; text: string }) {
+      const row = await updateTodoText(id, text);
+      if (!row) {
+        return `TODO with id ${id} not found.`;
+      }
+      return `Updated text for todo with id ${id} to "${text}"`;
     },
   },
 ];
