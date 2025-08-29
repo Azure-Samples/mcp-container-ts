@@ -23,6 +23,7 @@ const server = new StreamableHTTPServer(
 const MCP_ENDPOINT = "/mcp";
 const app = express();
 const router = express.Router();
+app.use("/", securityMiddlewares);
 app.use(MCP_ENDPOINT, securityMiddlewares);
 
 router.post(MCP_ENDPOINT, async (req: Request, res: Response) => {

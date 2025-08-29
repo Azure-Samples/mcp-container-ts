@@ -8,7 +8,16 @@ import { logger } from "./helpers/logs";
 import { authenticateJWT } from "./auth/jwt.js";
 const log = logger("middleware");
 
-// Middleware to limite the number of requests from a single IP address
+const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  log.info(`${req.method} ${req.originalUrl} (${req.ip}) - payload:`, req.body || 'NULL');
+  
+  res.on("finish", () => {
+    log.info(`Response sent: ${res.statusCode} ${res.statusMessage}`);
+  });
+  next();
+};
+
+// Middleware to limit the number of requests from a single IP address
 const rateLimiterMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -87,12 +96,13 @@ const validationMiddleware = [
 }];
 
 export const securityMiddlewares = [
-  authenticateJWT,
-  corsMiddleware,
-  rateLimiterMiddleware,
-  helmetMiddleware,
-  jsonMiddleware,
-  urlencodedMiddleware,
-  ...timeoutMiddleware,
+  loggingMiddleware,
+  // authenticateJWT,
+  // corsMiddleware,
+  // rateLimiterMiddleware,
+  // helmetMiddleware,
+  // jsonMiddleware,
+  // urlencodedMiddleware,
+  // ...timeoutMiddleware,
   ...validationMiddleware,
 ];
