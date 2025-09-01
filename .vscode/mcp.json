@@ -4,7 +4,7 @@
 			"type": "http",
 			"url": "https://<env-name>.<container-id>.<region>.azurecontainerapps.io/mcp",
 			"headers": {
-				"Authorization": "Bearer ${input:mcp-server-token}"
+				"Authorization": "Bearer ${input:mcp-server-token-remote}"
 			}
 		},
 		"mcp-server": {
@@ -21,6 +21,12 @@
 			"id": "mcp-server-token",
 			"description": "Enter the token for the MCP server",
 			"type": "promptString"
-		}
+		},
+		{
+			"password": true,
+			"id": "mcp-server-token-remote",
+			"description": "Enter the token for the MCP server (remote)",
+			"type": "promptString"
+		},
 	]
 }

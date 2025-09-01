@@ -7,7 +7,7 @@ console.warn(
   "WARNING: Do not use this in production without proper security measures."
 );
 
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync, existsSync } from "fs";
 import { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
 import { getUserPermissions, UserRole } from "./authorization";
@@ -31,13 +31,36 @@ const token = jwt.sign(PAYLOAD, JWT_SECRET, {
   expiresIn: JWT_EXPIRY,
 });
 
-// write the token to a file .env
-writeFileSync(
-  ".env",
-`JWT_AUDIENCE="${JWT_AUDIENCE}"
-JWT_ISSUER="${JWT_ISSUER}"
-JWT_EXPIRY="${JWT_EXPIRY}"
-JWT_SECRET="${JWT_SECRET}"
-JWT_TOKEN="${token}"`,
-  { flag: "a" }
-);
+// Define JWT variables to update
+const jwtVariables = {
+  JWT_AUDIENCE: JWT_AUDIENCE,
+  JWT_ISSUER: JWT_ISSUER,
+  JWT_EXPIRY: JWT_EXPIRY,
+  JWT_SECRET: JWT_SECRET,
+  JWT_TOKEN: token
+};
+
+// Read existing .env file if it exists
+let envContent = "";
+if (existsSync(".env")) {
+  envContent = readFileSync(".env", "utf8");
+}
+
+// Replace or append each JWT variable
+for (const [key, value] of Object.entries(jwtVariables)) {
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+  const replacement = `${key}="${value}"`;
+  
+  if (regex.test(envContent)) {
+    // Replace existing variable
+    envContent = envContent.replace(regex, replacement);
+  } else {
+    // Append new variable
+    if (envContent && !envContent.endsWith("\n")) {
+      envContent += "\n";
+    }
+    envContent += replacement + "\n";
+  }
+}
+
+writeFileSync(".env", envContent);

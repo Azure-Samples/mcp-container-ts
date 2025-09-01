@@ -9,6 +9,24 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
+@description('The JWT audience for auth.')
+@secure()
+param jwtAudience string
+@description('The JWT issuer for auth.')
+@secure()
+param jwtIssuer string
+@description('The JWT expiry for auth.')
+@secure()
+param jwtExpiry string
+@description('The JWT secret for auth.')
+@secure()
+param jwtSecret string
+@description('The JWT token for auth.')
+@secure()
+param jwtToken string
+
+param mcpServerIngressPort int = 3000
+
 param mcpContainerTsExists bool
 
 // Tags that should be applied to all resources.
@@ -34,6 +52,12 @@ module resources 'resources.bicep' = {
     location: location
     tags: tags
     mcpContainerTsExists: mcpContainerTsExists
+    jwtAudience: jwtAudience
+    jwtIssuer: jwtIssuer
+    jwtExpiry: jwtExpiry
+    jwtSecret: jwtSecret
+    jwtToken: jwtToken
+    mcpServerIngressPort: mcpServerIngressPort
   }
 }
 

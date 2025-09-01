@@ -13,6 +13,24 @@
       },
       "principalId": {
         "value": "${AZURE_PRINCIPAL_ID}"
+      },
+      "mcpServerIngressPort": {
+        "value": "${MCP_SERVER_INGRESS_PORT=3000}"
+      },
+      "jwtAudience": {
+        "value": "${JWT_AUDIENCE}"
+      },
+      "jwtIssuer": {
+        "value": "${JWT_ISSUER}"
+      },
+      "jwtExpiry": {
+        "value": "${JWT_EXPIRY}"
+      },
+      "jwtSecret": {
+        "value": "${JWT_SECRET}"
+      },
+      "jwtToken": {
+        "value": "${JWT_TOKEN}"
       }
     }
 }

@@ -10,3 +10,25 @@ services:
         language: ts
         docker:
             path: Dockerfile
+            context: .
+            remoteBuild: true
+
+hooks:
+  preup: 
+    posix:
+      shell: sh
+      continueOnError: false
+      interactive: false
+      run: |
+        npm run generate-token
+        env_dir=".azure/$(azd env get-value AZURE_ENV_NAME)"
+        mkdir -p "$env_dir"
+        cat .env >> "$env_dir/.env"
+    windows:
+      shell: pwsh
+      continueOnError: false
+      interactive: false
+      run: |
+        npm run generate-token
+        $dotenv = Get-Content .env
+        $dotenv | Add-Content -Path ./.azure/$(azd env get-value AZURE_ENV_NAME)/.env -Encoding utf8 -Force

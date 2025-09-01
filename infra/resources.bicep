@@ -4,7 +4,23 @@ param location string = resourceGroup().location
 @description('Tags that will be applied to all resources')
 param tags object = {}
 
+@description('The JWT audience for auth.')
+@secure()
+param jwtAudience string
+@description('The JWT issuer for auth.')
+@secure()
+param jwtIssuer string
+@description('The JWT expiry for auth.')
+@secure()
+param jwtExpiry string
+@description('The JWT secret for auth.')
+@secure()
+param jwtSecret string
+@description('The JWT token for auth.')
+@secure()
+param jwtToken string
 
+param mcpServerIngressPort int = 3000
 param mcpContainerTsExists bool
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -67,16 +83,37 @@ module mcpContainerTsFetchLatestImage './modules/fetch-container-image.bicep' = 
   }
 }
 
-module mcpContainerTs 'br/public:avm/res/app/container-app:0.8.0' = {
+module mcpContainerTs 'br/public:avm/res/app/container-app:0.16.0' = {
   name: 'mcpContainerTs'
   params: {
     name: 'mcp-container-ts'
-    ingressTargetPort: 3000
-    scaleMinReplicas: 1
-    scaleMaxReplicas: 1
-    secrets: {
-    
+    ingressTargetPort: mcpServerIngressPort
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 10
     }
+    secrets: [
+      {
+        name: 'jwt-audience'
+        value: jwtAudience
+      }
+      {
+        name: 'jwt-issuer'
+        value: jwtIssuer
+      }
+      {
+        name: 'jwt-expiry'
+        value: jwtExpiry
+      }
+      {
+        name: 'jwt-secret'
+        value: jwtSecret
+      }
+      {
+        name: 'jwt-token'
+        value: jwtToken
+      }
+    ]
     containers: [
       {
         image: mcpContainerTsFetchLatestImage.outputs.?containers[?0].?image ?? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
@@ -96,7 +133,27 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.8.0' = {
           }
           {
             name: 'PORT'
-            value: '3000'
+            value: '${mcpServerIngressPort}'
+          }
+          {
+            name: 'JWT_AUDIENCE'
+            secretRef: 'jwt-audience'
+          }
+          {
+            name: 'JWT_ISSUER'
+            secretRef: 'jwt-issuer'
+          }
+          {
+            name: 'JWT_EXPIRY'
+            secretRef: 'jwt-expiry'
+          }
+          {
+            name: 'JWT_SECRET'
+            secretRef: 'jwt-secret'
+          }
+          {
+            name: 'JWT_TOKEN'
+            secretRef: 'jwt-token'
           }
         ]
       }
