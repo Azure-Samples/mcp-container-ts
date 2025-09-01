@@ -31,15 +31,14 @@ const token = jwt.sign(PAYLOAD, JWT_SECRET, {
   expiresIn: JWT_EXPIRY,
 });
 
-// write the token to a file .env
-const jwtConfig = `# JWT CONFIGURATION DO NOT EDIT
-# START
-JWT_AUDIENCE="${JWT_AUDIENCE}"
-JWT_ISSUER="${JWT_ISSUER}"
-JWT_EXPIRY="${JWT_EXPIRY}"
-JWT_SECRET="${JWT_SECRET}"
-JWT_TOKEN="${token}"
-# END`;
+// Define JWT variables to update
+const jwtVariables = {
+  JWT_AUDIENCE: JWT_AUDIENCE,
+  JWT_ISSUER: JWT_ISSUER,
+  JWT_EXPIRY: JWT_EXPIRY,
+  JWT_SECRET: JWT_SECRET,
+  JWT_TOKEN: token
+};
 
 // Read existing .env file if it exists
 let envContent = "";
@@ -47,22 +46,21 @@ if (existsSync(".env")) {
   envContent = readFileSync(".env", "utf8");
 }
 
-// Check if JWT configuration section already exists
-const jwtSectionRegex = /# JWT CONFIGURATION DO NOT EDIT\s*\n# START\s*\n([\s\S]*?)\n# END/;
-const hasJwtSection = jwtSectionRegex.test(envContent);
-
-if (hasJwtSection) {
-  // Replace existing JWT configuration
-  envContent = envContent.replace(jwtSectionRegex, jwtConfig);
-} else {
-  // Append JWT configuration to the end
-  if (envContent && !envContent.endsWith("\n")) {
-    envContent += "\n";
+// Replace or append each JWT variable
+for (const [key, value] of Object.entries(jwtVariables)) {
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+  const replacement = `${key}="${value}"`;
+  
+  if (regex.test(envContent)) {
+    // Replace existing variable
+    envContent = envContent.replace(regex, replacement);
+  } else {
+    // Append new variable
+    if (envContent && !envContent.endsWith("\n")) {
+      envContent += "\n";
+    }
+    envContent += replacement + "\n";
   }
-  if (envContent) {
-    envContent += "\n";
-  }
-  envContent += jwtConfig;
 }
 
 writeFileSync(".env", envContent);
