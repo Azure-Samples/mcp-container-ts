@@ -1,0 +1,42 @@
+diff --git a/node_modules/@azure/monitor-opentelemetry/dist/esm/index.js b/node_modules/@azure/monitor-opentelemetry/dist/esm/index.js
+index 7924dd8..1e0144e 100644
+--- a/node_modules/@azure/monitor-opentelemetry/dist/esm/index.js
++++ b/node_modules/@azure/monitor-opentelemetry/dist/esm/index.js
+@@ -7,13 +7,13 @@ import { InternalConfig } from "./shared/config.js";
+ import { MetricHandler } from "./metrics/index.js";
+ import { TraceHandler } from "./traces/handler.js";
+ import { LogHandler } from "./logs/index.js";
+-import { AZURE_MONITOR_OPENTELEMETRY_VERSION, APPLICATIONINSIGHTS_STATSBEAT_ENABLED_PREVIEW, } from "./types.js";
++import * as types from "./types.js";
+ import { BrowserSdkLoader } from "./browserSdkLoader/browserSdkLoader.js";
+ import { setSdkPrefix } from "./metrics/quickpulse/utils.js";
+ import { getInstance } from "./utils/statsbeat.js";
+ import { patchOpenTelemetryInstrumentationEnable } from "./utils/opentelemetryInstrumentationPatcher.js";
+ import { parseResourceDetectorsFromEnvVar } from "./utils/common.js";
+-process.env["AZURE_MONITOR_DISTRO_VERSION"] = AZURE_MONITOR_OPENTELEMETRY_VERSION;
++process.env["AZURE_MONITOR_DISTRO_VERSION"] = types.AZURE_MONITOR_OPENTELEMETRY_VERSION;
+ let sdk;
+ let browserSdkLoader;
+ /**
+@@ -38,7 +38,7 @@ export function useAzureMonitor(options) {
+         aadHandling: !!config.azureMonitorExporterOptions?.credential,
+         diskRetry: !config.azureMonitorExporterOptions?.disableOfflineStorage,
+         rateLimitedSampler: !!config.tracesPerSecond,
+-        customerStatsbeat: process.env[APPLICATIONINSIGHTS_STATSBEAT_ENABLED_PREVIEW] === "True",
++        customerStatsbeat: process.env[types.APPLICATIONINSIGHTS_STATSBEAT_ENABLED_PREVIEW] === "True",
+     };
+     getInstance().setStatsbeatFeatures(statsbeatInstrumentations, statsbeatFeatures);
+     if (config.browserSdkLoaderOptions.enabled) {
+diff --git a/node_modules/@azure/monitor-opentelemetry/dist/esm/types.d.ts b/node_modules/@azure/monitor-opentelemetry/dist/esm/types.d.ts
+index 0e5f4db..029069c 100644
+--- a/node_modules/@azure/monitor-opentelemetry/dist/esm/types.d.ts
++++ b/node_modules/@azure/monitor-opentelemetry/dist/esm/types.d.ts
+@@ -136,7 +136,7 @@ export interface BrowserSdkLoaderOptions {
+     connectionString?: string;
+ }
+ export declare const AZURE_MONITOR_OPENTELEMETRY_VERSION = "1.12.0";
+-export declare const AZURE_MONITOR_STATSBEAT_FEATURES = "AZURE_MONITOR_STATSBEAT_FEATURES";
++export const AZURE_MONITOR_STATSBEAT_FEATURES = "AZURE_MONITOR_STATSBEAT_FEATURES";
+ export declare const AZURE_MONITOR_PREFIX = "AZURE_MONITOR_PREFIX";
+ export declare const AZURE_MONITOR_AUTO_ATTACH = "AZURE_MONITOR_AUTO_ATTACH";
+ export declare const APPLICATION_INSIGHTS_SHIM_VERSION = "APPLICATION_INSIGHTS_SHIM_VERSION";
