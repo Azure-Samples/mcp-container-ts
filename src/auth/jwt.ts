@@ -24,7 +24,6 @@ export class JWTService {
   private static readonly SECRET = process.env.JWT_SECRET;
   private static readonly AUDIENCE = process.env.JWT_AUDIENCE || "urn:bar";
   private static readonly ISSUER = process.env.JWT_ISSUER || "urn:foo";
-  private static readonly TOKEN_EXPIRY = process.env.JWT_EXPIRY || "1h";
   static verifyToken(token: string): AuthenticatedUser {
     if (!this.SECRET) {
       throw new Error("JWT_SECRET environment variable is required");

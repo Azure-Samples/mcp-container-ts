@@ -1,8 +1,13 @@
 import "dotenv/config";
+
+
 import express, { Request, Response } from "express";
 import { StreamableHTTPServer } from "./server.js";
 import { logger } from "./helpers/logs.js";
 import { securityMiddlewares } from "./server-middlewares.js";
+import { initializeTelemetry } from "./helpers/azure-monitor.js";
+initializeTelemetry();
+
 const log = logger("index");
 
 const server = new StreamableHTTPServer();

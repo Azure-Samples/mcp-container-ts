@@ -1,3 +1,4 @@
+console.warn("------------------------------------------------------------------------------------------------------------");
 console.warn("WARNING: This file is for demonstration purposes only.");
 console.warn("WARNING: It generates a JWT token and writes it to a .env file.");
 console.warn(
@@ -6,39 +7,42 @@ console.warn(
 console.warn(
   "WARNING: Do not use this in production without proper security measures."
 );
+console.warn("------------------------------------------------------------------------------------------------------------");
+console.warn("Learn more: https://learn.microsoft.com/azure/security/fundamentals/secrets-best-practices");
+console.warn("------------------------------------------------------------------------------------------------------------");
+console.warn("");
 
-import { writeFileSync, readFileSync, existsSync } from "fs";
-import { randomBytes } from "crypto";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import jwt from "jsonwebtoken";
-import { getUserPermissions, UserRole } from "./authorization";
+import { USER_DETAILS_DEMO } from "./user-details-demo";
 
 // define dummy values for JWT_SECRET, JWT_EXPIRY, and PAYLOAD
-const JWT_SECRET = randomBytes(32).toString('base64');
-const JWT_EXPIRY = "1h";
+const JWT_SECRET = randomBytes(32).toString("base64");
+const JWT_EXPIRY = "2h";
 const JWT_AUDIENCE = "urn:foo";
 const JWT_ISSUER = "urn:bar";
 const PAYLOAD = {
   issuer: JWT_ISSUER,
   audience: JWT_AUDIENCE,
-  id: "user-id-123",
-  email: "user@example.com",
-  role: UserRole.ADMIN,
-  permissions: getUserPermissions(UserRole.ADMIN)
+  ...USER_DETAILS_DEMO
 };
 
-const token = jwt.sign(PAYLOAD, JWT_SECRET, {
+const JWT_TOKEN = jwt.sign(PAYLOAD, JWT_SECRET, {
   algorithm: "HS256",
   expiresIn: JWT_EXPIRY,
 });
 
 // Define JWT variables to update
 const jwtVariables = {
-  JWT_AUDIENCE: JWT_AUDIENCE,
-  JWT_ISSUER: JWT_ISSUER,
-  JWT_EXPIRY: JWT_EXPIRY,
-  JWT_SECRET: JWT_SECRET,
-  JWT_TOKEN: token
+  JWT_AUDIENCE,
+  JWT_ISSUER,
+  JWT_EXPIRY,
+  JWT_SECRET,
+  JWT_TOKEN
 };
+
+console.log("Generated JWT token for demonstration purposes: ", jwtVariables);
 
 // Read existing .env file if it exists
 let envContent = "";

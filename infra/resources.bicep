@@ -176,3 +176,4 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.16.0' = {
 
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_RESOURCE_MCP_CONTAINER_TS_ID string = mcpContainerTs.outputs.resourceId
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString

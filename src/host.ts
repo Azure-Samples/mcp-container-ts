@@ -2,7 +2,7 @@ import "dotenv/config";
 import OpenAI from "openai";
 import { ChatCompletionStreamingRunner } from "openai/lib/ChatCompletionStreamingRunner";
 import { RunnableToolFunctionWithoutParse } from "openai/lib/RunnableFunction";
-import { MCPClient } from "./client";
+import { MCPClient } from "./client.js";
 const model = "ai/phi4:14B-Q4_0";
 const accessToken = process.env.JWT_TOKEN;
 const usage: OpenAI.Completions.CompletionUsage[] = [];
