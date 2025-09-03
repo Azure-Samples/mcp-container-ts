@@ -34,12 +34,14 @@ urlFragment: mcp-container-ts
 
 </div>
 
+This is a quick start guide that provides the basic building blocks to set up a remote Model Context Protocol (MCP) server using Azure Container Apps. The MCP server is built using Node.js and TypeScript, and it can be used to run various tools and services in a serverless environment. This project also implements a multi-layered security architecture combining JWT-based authentication with role-based access control (RBAC) to secure the MCP server endpoints and tools.
 
-This is a quick start guide that provides the basic building blocks to set up a remote Model Context Protocol (MCP) server using Azure Container Apps. The MCP server is built using Node.js and TypeScript, and it can be used to run various tools and services in a serverless environment.
+> [!WARNING]
+> Code presented here is for demo purposes only. Your specific scenarios (including rules inside your enterprise, specific security controls, or other protection mechanisms) may differ from the ones that are outlined in this repository. Always conduct a security audit and threat modeling for any production and customer-facing assets that require authentication and authorization.
 
 
 ## What is MCP?
-The Model Context Protocol (MCP) is a protocol that allows different AI models and tools to communicate with each other. It provides a standardized way for models to share information and collaborate on tasks. The MCP server acts as a bridge between different models and tools, allowing them to work together seamlessly.
+The Model Context Protocol (MCP) is an open protocol that allows Large Language Models (LLMs) to interact with external tools and services in a standardized way. MCP enables LLMs to access and utilize various resources, such as databases, APIs, and other services, to enhance their capabilities and provide more accurate and relevant responses.
 
 Below is the architecture diagram for a typical MCP server setup:
 
