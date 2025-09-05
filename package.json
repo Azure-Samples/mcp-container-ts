@@ -38,7 +38,7 @@
     "@opentelemetry/semantic-conventions": "^1.36.0",
     "better-sqlite3": "^11.9.1",
     "chalk": "^5.4.1",
-    "connect-timeout": "^1.9.0",
+    "connect-timeout": "^1.9.1",
     "cors": "^2.8.5",
     "cross-env": "^10.0.0",
     "debug": "^4.4.0",
