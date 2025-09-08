@@ -55,7 +55,7 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
-    "@modelcontextprotocol/inspector": "^0.15.0",
+    "@modelcontextprotocol/inspector": "^0.16.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/connect-timeout": "^1.9.0",
     "@types/cors": "^2.8.19",
