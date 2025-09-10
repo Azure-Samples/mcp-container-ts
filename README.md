@@ -133,12 +133,15 @@ npm install
 3. Generate a new JWT configuration:
 
 ```bash
-npm run generate-token
+npm run generate-token -- --admin
 ```
+
+> [!NOTE]
+> You can also generate a token with a different role by using the `--admin`, `--user` or `--readonly` flags. The generated token will have different permissions based on the role you choose (see `src/auth/authorization.ts` for more details).
 
 This will append (or create) a new JWT configuration to `.env` file at the root of the project. The generated token will be used to authenticate requests to the MCP server.
 
-> [!NOTE]
+> [!IMPORTANT]
 > In a production environment, you should use a more secure method to manage your secrets and tokens.
 
 4. Start the dev server

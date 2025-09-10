@@ -28,7 +28,7 @@ import {
 import { HttpInstrumentationConfig } from "@opentelemetry/instrumentation-http";
 import { FsInstrumentation } from "@opentelemetry/instrumentation-fs";
 import { IncomingMessage } from "node:http";
-import { USER_DETAILS_DEMO } from "../auth/user-details-demo.js";
+import { USER_DETAILS_ADMIN_DEMO } from "../auth/user-details-demo.js";
 
 export function initializeTelemetry() {
   // Filter using HTTP instrumentation configuration
@@ -102,9 +102,9 @@ function addSpanProcessor(options: AzureMonitorOpenTelemetryOptions) {
 
       // Extra attributes could be added to the Span
       else {
-        span.attributes["UserId"] = USER_DETAILS_DEMO.id;
-        span.attributes["UserEmail"] = USER_DETAILS_DEMO.email;
-        span.attributes["UserRole"] = USER_DETAILS_DEMO.role;
+        span.attributes["UserId"] = USER_DETAILS_ADMIN_DEMO.id;
+        span.attributes["UserEmail"] = USER_DETAILS_ADMIN_DEMO.email;
+        span.attributes["UserRole"] = USER_DETAILS_ADMIN_DEMO.role;
       }
     }
   }
