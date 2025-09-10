@@ -175,14 +175,7 @@ export class StreamableHTTPServer {
         );
         return {
           jsonrpc: JSON_RPC,
-          content: [
-            {
-              type: "text",
-              text: `Tool ${toolName} executed with arguments ${JSON.stringify(
-                args
-              )}. Result: ${JSON.stringify(result)}`,
-            },
-          ],
+          ...result
         };
       } catch (error) {
         log.error(

@@ -28,10 +28,37 @@ const UpdateTodoInputSchema = z.object({
 
 const ListTodosInputSchema = z.object({});
 
-// Common output schema
-const ToolOutputSchema = z.object({
-  content: z.array(z.string()),
+// output schemas
+const AddTodoOutputSchema = z.object({
+  id: z.number(),
+  title: z.string(),
 });
+
+const CompleteTodoOutputSchema = z.object({
+  id: z.number(),
+  completed: z.boolean(),
+});
+
+const DeleteTodoOutputSchema = z.object({
+  id: z.number(),
+  deleted: z.boolean(),
+});
+
+const UpdateTodoOutputSchema = z.object({
+  id: z.number(),
+});
+
+const ListTodosOutputSchema = z.object({
+  todos: z.array(
+    z.object({
+      id: z.number(),
+      text: z.string(),
+      completed: z.boolean(),
+    })
+  ),
+});
+
+// Define the tools
 
 export const TodoTools = [
   {
@@ -39,13 +66,21 @@ export const TodoTools = [
     description:
       "Add a new TODO item to the list. Provide a title for the task you want to add. Returns a confirmation message with the new TODO id.",
     inputSchema: zodToJsonSchema(AddTodoInputSchema),
-    outputSchema: zodToJsonSchema(ToolOutputSchema),
+    outputSchema: zodToJsonSchema(AddTodoOutputSchema),
     async execute({ title }: { title: string }) {
       const info = await addTodo(title);
+      const structuredContent = {
+        id: info.lastInsertRowid,
+        title: title,
+      };
       return {
         content: [
-          `Added TODO: ${title} (id: ${info.lastInsertRowid})`
+          {
+            type: "text",
+            text: JSON.stringify(structuredContent, null, 2),
+          },
         ],
+        structuredContent,
       };
     },
   },
@@ -54,16 +89,34 @@ export const TodoTools = [
     description:
       "List all TODO items. Returns a formatted list of all tasks with their ids, titles, and completion status.",
     inputSchema: zodToJsonSchema(ListTodosInputSchema),
-    outputSchema: zodToJsonSchema(ToolOutputSchema),
+    outputSchema: zodToJsonSchema(ListTodosOutputSchema),
     async execute() {
       const tools = await listTodos();
       if (!tools || tools.length === 0) {
-        return { content: ["No TODOs found."] };
+        return { content: ["No TODOs found."], structuredContent: {} };
       }
       return {
-        content: tools.map(
-          (t) => `TODO: ${t.text} (id: ${t.id})${t.completed ? " [completed]" : ""}`
-        ),
+        content: tools.map((t) => {
+          return {
+            type: "text",
+            text: JSON.stringify(
+              {
+                id: t.id,
+                text: t.text,
+                completed: t.completed,
+              },
+              null,
+              2
+            ),
+          };
+        }),
+        structuredContent: {
+          todos: tools.map((t) => ({
+            id: t.id,
+            text: t.text,
+            completed: t.completed,
+          })),
+        },
       };
     },
   },
@@ -72,20 +125,21 @@ export const TodoTools = [
     description:
       "Mark a TODO item as completed. Provide the id of the task to mark as done. Returns a confirmation message or an error if the id does not exist.",
     inputSchema: zodToJsonSchema(CompleteTodoInputSchema),
-    outputSchema: zodToJsonSchema(ToolOutputSchema),
+    outputSchema: zodToJsonSchema(CompleteTodoOutputSchema),
     async execute({ id }: { id: number }) {
       const info = await completeTodo(id);
-      if (info.changes === 0) {
-        return {
-          content: [
-            `TODO with id ${id} not found.`
-          ],
-        };
-      }
+      const structuredContent = {
+        id,
+        completed: info.changes > 0,
+      };
       return {
         content: [
-          `TODO with id ${id} marked as completed.`
+          {
+            type: "text",
+            text: JSON.stringify(structuredContent, null, 2),
+          },
         ],
+        structuredContent,
       };
     },
   },
@@ -94,20 +148,26 @@ export const TodoTools = [
     description:
       "Delete a TODO item from the list. Provide the id of the task to delete. Returns a confirmation message or an error if the id does not exist.",
     inputSchema: zodToJsonSchema(DeleteTodoInputSchema),
-    outputSchema: zodToJsonSchema(ToolOutputSchema),
+    outputSchema: zodToJsonSchema(DeleteTodoOutputSchema),
     async execute({ id }: { id: number }) {
       const row = await deleteTodo(id);
+      const structuredContent = {
+        id,
+        deleted: !!row,
+      };
       if (!row) {
         return {
           content: [
-            `TODO with id ${id} not found.`
+            {
+              type: "text",
+              text: JSON.stringify(structuredContent, null, 2),
+            },
           ],
         };
       }
       return {
-        content: [
-          `Deleted TODO: ${row.text} (id: ${id})`
-        ],
+        content: [`Deleted TODO: ${row.text} (id: ${id})`],
+        structuredContent,
       };
     },
   },
@@ -115,20 +175,36 @@ export const TodoTools = [
     name: "updateTodoText",
     description: "Update the text of a todo",
     inputSchema: zodToJsonSchema(UpdateTodoInputSchema),
-    outputSchema: zodToJsonSchema(ToolOutputSchema),
+    outputSchema: zodToJsonSchema(UpdateTodoOutputSchema),
     async execute({ id, text }: { id: number; text: string }) {
       const row = await updateTodoText(id, text);
       if (!row) {
+        const message = `Todo with id ${id} not found`;
         return {
           content: [
-            `TODO with id ${id} not found.`
+            {
+              type: "text",
+              text: JSON.stringify({ isError: true, message }, null, 2),
+            },
           ],
+          structuredContent: {
+            isError: true,
+            message,
+            id,
+          },
         };
       }
+      const structuredContent = {
+        id,
+      };
       return {
         content: [
-          `Updated text for todo with id ${id} to "${text}"`
+          {
+            type: "text",
+            text: JSON.stringify(structuredContent, null, 2),
+          },
         ],
+        structuredContent,
       };
     },
   },
