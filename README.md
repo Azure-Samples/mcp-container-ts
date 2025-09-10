@@ -102,6 +102,16 @@ flowchart TD
     class container highlight
 ```
 
+## Why use Azure Container Apps?
+Azure Container Apps is a fully managed, serverless container platform that simplifies the deployment and operation of containerized applications. ACA also provides serverless GPU support, so that you can bring your own containers and deploy them to GPU-backed environments that automatically scale based on demand.
+
+Key benefits:
+- Autoscaling – scale to zero when idle, scale out with usage
+- Pay-per-second billing – pay only for the compute you use
+- Ease of use - accelerate developer velocity and easily bring any container and run it on GPUs in the cloud
+- No infrastructure management – focus on your model and app
+- Enterprise-grade features – out of the box support for bringing your own virtual networks, managed identity, private endpoints and more with full data governance
+
 ## Prerequisites
 
 1. Install the latest version of [VS Code](https://code.visualstudio.com/)
