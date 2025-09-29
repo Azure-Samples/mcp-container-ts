@@ -1,5 +1,6 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
+import { trace, SpanStatusCode } from "@opentelemetry/api";
 import {
   addTodo,
   listTodos,
@@ -68,20 +69,57 @@ export const TodoTools = [
     inputSchema: zodToJsonSchema(AddTodoInputSchema),
     outputSchema: zodToJsonSchema(AddTodoOutputSchema),
     async execute({ title }: { title: string }) {
-      const info = await addTodo(title);
-      const structuredContent = {
-        id: info.lastInsertRowid,
-        title: title,
-      };
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(structuredContent, null, 2),
-          },
-        ],
-        structuredContent,
-      };
+      const tracer = trace.getTracer("todo-tools");
+      const span = tracer.startSpan("add_todo", {
+        attributes: {
+          "todo.title": title,
+          "todo.title_length": title.length,
+        },
+      });
+      
+      try {
+        const info = await addTodo(title);
+        const structuredContent = {
+          id: info.lastInsertRowid,
+          title: title,
+        };
+        
+        span.setAttributes({
+          "todo.id": info.lastInsertRowid as number,
+          "operation.success": true,
+        });
+        
+        span.addEvent("todo.created", {
+          "todo.id": info.lastInsertRowid as number,
+          "todo.title": title,
+        });
+        
+        span.setStatus({
+          code: SpanStatusCode.OK,
+          message: "TODO added successfully",
+        });
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(structuredContent, null, 2),
+            },
+          ],
+          structuredContent,
+        };
+      } catch (error) {
+        span.addEvent("todo.creation_error", {
+          "error.message": error instanceof Error ? error.message : String(error),
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        span.end();
+      }
     },
   },
   {
@@ -91,33 +129,72 @@ export const TodoTools = [
     inputSchema: zodToJsonSchema(ListTodosInputSchema),
     outputSchema: zodToJsonSchema(ListTodosOutputSchema),
     async execute() {
-      const tools = await listTodos();
-      if (!tools || tools.length === 0) {
-        return { content: ["No TODOs found."], structuredContent: {} };
+      const tracer = trace.getTracer("todo-tools");
+      const span = tracer.startSpan("list_todos");
+      
+      try {
+        const tools = await listTodos();
+        
+        span.setAttributes({
+          "todos.count": tools.length,
+          "todos.completed_count": tools.filter(t => t.completed).length,
+          "todos.pending_count": tools.filter(t => !t.completed).length,
+        });
+        
+        if (!tools || tools.length === 0) {
+          span.addEvent("todos.empty_list");
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "No TODOs found",
+          });
+          return { content: ["No TODOs found."], structuredContent: {} };
+        }
+        
+        span.addEvent("todos.listed", {
+          "count": tools.length,
+          "completed": tools.filter(t => t.completed).length,
+        });
+        
+        span.setStatus({
+          code: SpanStatusCode.OK,
+          message: `Listed ${tools.length} TODOs`,
+        });
+        
+        return {
+          content: tools.map((t) => {
+            return {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  id: t.id,
+                  text: t.text,
+                  completed: t.completed,
+                },
+                null,
+                2
+              ),
+            };
+          }),
+          structuredContent: {
+            todos: tools.map((t) => ({
+              id: t.id,
+              text: t.text,
+              completed: t.completed,
+            })),
+          },
+        };
+      } catch (error) {
+        span.addEvent("todos.list_error", {
+          "error.message": error instanceof Error ? error.message : String(error),
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        span.end();
       }
-      return {
-        content: tools.map((t) => {
-          return {
-            type: "text",
-            text: JSON.stringify(
-              {
-                id: t.id,
-                text: t.text,
-                completed: t.completed,
-              },
-              null,
-              2
-            ),
-          };
-        }),
-        structuredContent: {
-          todos: tools.map((t) => ({
-            id: t.id,
-            text: t.text,
-            completed: t.completed,
-          })),
-        },
-      };
     },
   },
   {
@@ -127,20 +204,66 @@ export const TodoTools = [
     inputSchema: zodToJsonSchema(CompleteTodoInputSchema),
     outputSchema: zodToJsonSchema(CompleteTodoOutputSchema),
     async execute({ id }: { id: number }) {
-      const info = await completeTodo(id);
-      const structuredContent = {
-        id,
-        completed: info.changes > 0,
-      };
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(structuredContent, null, 2),
-          },
-        ],
-        structuredContent,
-      };
+      const tracer = trace.getTracer("todo-tools");
+      const span = tracer.startSpan("complete_todo", {
+        attributes: {
+          "todo.id": id,
+        },
+      });
+      
+      try {
+        const info = await completeTodo(id);
+        const wasCompleted = info.changes > 0;
+        const structuredContent = {
+          id,
+          completed: wasCompleted,
+        };
+        
+        span.setAttributes({
+          "operation.success": wasCompleted,
+          "database.changes": info.changes,
+        });
+        
+        if (wasCompleted) {
+          span.addEvent("todo.completed", {
+            "todo.id": id,
+          });
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "TODO marked as completed",
+          });
+        } else {
+          span.addEvent("todo.not_found", {
+            "todo.id": id,
+          });
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "TODO not found or already completed",
+          });
+        }
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(structuredContent, null, 2),
+            },
+          ],
+          structuredContent,
+        };
+      } catch (error) {
+        span.addEvent("todo.completion_error", {
+          "error.message": error instanceof Error ? error.message : String(error),
+          "todo.id": id,
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        span.end();
+      }
     },
   },
   {
@@ -150,25 +273,75 @@ export const TodoTools = [
     inputSchema: zodToJsonSchema(DeleteTodoInputSchema),
     outputSchema: zodToJsonSchema(DeleteTodoOutputSchema),
     async execute({ id }: { id: number }) {
-      const row = await deleteTodo(id);
-      const structuredContent = {
-        id,
-        deleted: !!row,
-      };
-      if (!row) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(structuredContent, null, 2),
-            },
-          ],
+      const tracer = trace.getTracer("todo-tools");
+      const span = tracer.startSpan("delete_todo", {
+        attributes: {
+          "todo.id": id,
+        },
+      });
+      
+      try {
+        const row = await deleteTodo(id);
+        const wasDeleted = !!row;
+        const structuredContent = {
+          id,
+          deleted: wasDeleted,
         };
+        
+        span.setAttributes({
+          "operation.success": wasDeleted,
+        });
+        
+        if (!row) {
+          span.addEvent("todo.not_found", {
+            "todo.id": id,
+          });
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "TODO not found",
+          });
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(structuredContent, null, 2),
+              },
+            ],
+          };
+        }
+        
+        span.setAttributes({
+          "todo.text": row.text,
+          "todo.text_length": row.text.length,
+        });
+        
+        span.addEvent("todo.deleted", {
+          "todo.id": id,
+          "todo.text": row.text,
+        });
+        
+        span.setStatus({
+          code: SpanStatusCode.OK,
+          message: "TODO deleted successfully",
+        });
+        
+        return {
+          content: [`Deleted TODO: ${row.text} (id: ${id})`],
+          structuredContent,
+        };
+      } catch (error) {
+        span.addEvent("todo.deletion_error", {
+          "error.message": error instanceof Error ? error.message : String(error),
+          "todo.id": id,
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        span.end();
       }
-      return {
-        content: [`Deleted TODO: ${row.text} (id: ${id})`],
-        structuredContent,
-      };
     },
   },
   {
@@ -177,35 +350,84 @@ export const TodoTools = [
     inputSchema: zodToJsonSchema(UpdateTodoInputSchema),
     outputSchema: zodToJsonSchema(UpdateTodoOutputSchema),
     async execute({ id, text }: { id: number; text: string }) {
-      const row = await updateTodoText(id, text);
-      if (!row) {
-        const message = `Todo with id ${id} not found`;
+      const tracer = trace.getTracer("todo-tools");
+      const span = tracer.startSpan("update_todo_text", {
+        attributes: {
+          "todo.id": id,
+          "todo.new_text": text,
+          "todo.text_length": text.length,
+        },
+      });
+      
+      try {
+        const row = await updateTodoText(id, text);
+        
+        if (!row) {
+          const message = `Todo with id ${id} not found`;
+          
+          span.addEvent("todo.not_found", {
+            "todo.id": id,
+          });
+          
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "TODO not found",
+          });
+          
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ isError: true, message }, null, 2),
+              },
+            ],
+            structuredContent: {
+              isError: true,
+              message,
+              id,
+            },
+          };
+        }
+        
+        span.setAttributes({
+          "operation.success": true,
+        });
+        
+        span.addEvent("todo.text_updated", {
+          "todo.id": id,
+          "todo.new_text": text,
+        });
+        
+        span.setStatus({
+          code: SpanStatusCode.OK,
+          message: "TODO text updated successfully",
+        });
+        
+        const structuredContent = {
+          id,
+        };
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify({ isError: true, message }, null, 2),
+              text: JSON.stringify(structuredContent, null, 2),
             },
           ],
-          structuredContent: {
-            isError: true,
-            message,
-            id,
-          },
+          structuredContent,
         };
+      } catch (error) {
+        span.addEvent("todo.update_error", {
+          "error.message": error instanceof Error ? error.message : String(error),
+          "todo.id": id,
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        span.end();
       }
-      const structuredContent = {
-        id,
-      };
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(structuredContent, null, 2),
-          },
-        ],
-        structuredContent,
-      };
     },
   },
 ];

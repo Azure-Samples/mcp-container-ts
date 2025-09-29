@@ -30,6 +30,9 @@ import { FsInstrumentation } from "@opentelemetry/instrumentation-fs";
 import { IncomingMessage } from "node:http";
 import { USER_DETAILS_ADMIN_DEMO } from "../auth/user-details-demo.js";
 
+import { logger } from "./logs.js";
+const log = logger("otel");
+
 export function initializeTelemetry() {
   // Filter using HTTP instrumentation configuration
   const httpInstrumentationConfig: HttpInstrumentationConfig = {
@@ -54,22 +57,31 @@ export function initializeTelemetry() {
   const options: AzureMonitorOpenTelemetryOptions = {
     // Sampling could be configured here
     samplingRatio: 1,
+    enableLiveMetrics: true,
+    // Use connection string from env variable APPLICATIONINSIGHTS_CONNECTION_STRING
+    azureMonitorExporterOptions: {
+      connectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
+    },
     // Use custom Resource
     resource: customResource as any,
     instrumentationOptions: {
       // Custom HTTP Instrumentation Configuration
       http: httpInstrumentationConfig,
       azureSdk: { enabled: true },
-      mongoDb: { enabled: true },
     },
   };
 
   addSpanProcessor(options);
   addOTLPExporter(options);
   useAzureMonitor(options);
+  log.success("Azure Monitor OpenTelemetry initialized");
 
   // Need client to be created
   addOpenTelemetryInstrumentation();
+  log.success("Azure Monitor configured successfully!");
+  log.success("Connection string source: APPLICATIONINSIGHTS_CONNECTION_STRING");
+  log.success("Telemetry will be sent to Azure Application Insights");
+  log.info("Check Azure Portal > Application Insights > Live Metrics Stream");
 }
 
 function addOpenTelemetryInstrumentation() {

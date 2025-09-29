@@ -32,7 +32,7 @@ import { userInfo } from "node:os";
 
 // define dummy values for JWT_SECRET, JWT_EXPIRY, and PAYLOAD
 const JWT_SECRET = randomBytes(32).toString("base64");
-const JWT_EXPIRY = "2h";
+const JWT_EXPIRY = "6h";
 const JWT_AUDIENCE = "urn:foo";
 const JWT_ISSUER = "urn:bar";
 const USER_ROLE =
