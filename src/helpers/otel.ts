@@ -58,10 +58,6 @@ export function initializeTelemetry() {
     // Sampling could be configured here
     samplingRatio: 1,
     enableLiveMetrics: true,
-    // Use connection string from env variable APPLICATIONINSIGHTS_CONNECTION_STRING
-    azureMonitorExporterOptions: {
-      connectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
-    },
     // Use custom Resource
     resource: customResource as any,
     instrumentationOptions: {
@@ -71,17 +67,26 @@ export function initializeTelemetry() {
     },
   };
 
-  addSpanProcessor(options);
-  addOTLPExporter(options);
-  useAzureMonitor(options);
-  log.success("Azure Monitor OpenTelemetry initialized");
-
-  // Need client to be created
-  addOpenTelemetryInstrumentation();
-  log.success("Azure Monitor configured successfully!");
-  log.success("Connection string source: APPLICATIONINSIGHTS_CONNECTION_STRING");
-  log.success("Telemetry will be sent to Azure Application Insights");
-  log.info("Check Azure Portal > Application Insights > Live Metrics Stream");
+  if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+    // Use connection string from env variable APPLICATIONINSIGHTS_CONNECTION_STRING
+    options.azureMonitorExporterOptions = {
+      connectionString: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
+    };
+    addSpanProcessor(options);
+    addOTLPExporter(options);
+    useAzureMonitor(options);
+    log.success("Azure Monitor OpenTelemetry initialized");
+    
+    // Need client to be created
+    addOpenTelemetryInstrumentation();
+    log.success("Azure Monitor configured successfully!");
+    log.success("Connection string source: env=APPLICATIONINSIGHTS_CONNECTION_STRING");
+    log.success("Telemetry will be sent to Azure Application Insights");
+    log.info("Check Azure Portal > Application Insights > Live Metrics Stream");
+  }
+  else {
+    log.warn("APPLICATIONINSIGHTS_CONNECTION_STRING not set, telemetry disabled");
+  }
 }
 
 function addOpenTelemetryInstrumentation() {
