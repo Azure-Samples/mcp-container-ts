@@ -155,6 +155,10 @@ module mcpContainerTs 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'JWT_TOKEN'
             secretRef: 'jwt-token'
           }
+          {
+            name: 'DEBUG'
+            value: '*'
+          }
         ]
       }
     ]
