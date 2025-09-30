@@ -9,7 +9,14 @@ import {
   Notification,
   SetLevelRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { context, ContextAPI, Span, SpanStatusCode, trace, TraceAPI } from "@opentelemetry/api";
+import {
+  context,
+  ContextAPI,
+  Span,
+  SpanStatusCode,
+  trace,
+  TraceAPI,
+} from "@opentelemetry/api";
 import { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import {
@@ -23,10 +30,21 @@ import { TodoTools } from "./tools.js";
 const log = logger("server");
 const JSON_RPC = "2.0";
 const JSON_RPC_ERROR = -32603;
+const SUPPORTED_VERSIONS = ["2025-03-26", "2025-06-18"];
 
 export class StreamableHTTPServer {
   server: Server;
   private currentUser: AuthenticatedUser | null = null;
+  private pendingInitializations = new Map<
+    string,
+    {
+      sessionId: string;
+      protocolVersion: string;
+      clientInfo?: { name: string; version: string };
+      createdAt: number;
+      timeoutId?: NodeJS.Timeout;
+    }
+  >();
 
   constructor() {
     this.server = new Server(
@@ -43,6 +61,92 @@ export class StreamableHTTPServer {
         },
       }
     );
+
+    // Set up the oninitialized callback
+    this.server.oninitialized = () => {
+      const tracer = trace.getTracer("mcp-server");
+      const span = tracer.startSpan("server.oninitialized");
+
+      try {
+        // Find and mark the most recent pending initialization as completed
+        let completedSession: string | null = null;
+        let sessionInfo: any = null;
+
+        for (const [sessionId, info] of this.pendingInitializations.entries()) {
+          if (
+            !completedSession ||
+            info.createdAt >
+              this.pendingInitializations.get(completedSession)!.createdAt
+          ) {
+            completedSession = sessionId;
+            sessionInfo = info;
+          }
+        }
+
+        if (completedSession && sessionInfo) {
+          // Clear the timeout
+          if (sessionInfo.timeoutId) {
+            clearTimeout(sessionInfo.timeoutId);
+          }
+
+          const initializationTime = Date.now() - sessionInfo.createdAt;
+
+          span.setAttributes({
+            "session.id": completedSession,
+            "session.initialization_time_ms": initializationTime,
+            "protocol.version": sessionInfo.protocolVersion,
+            "client.name": sessionInfo.clientInfo?.name || "unknown",
+            "client.version": sessionInfo.clientInfo?.version || "unknown",
+          });
+
+          span.addEvent("session.initialized", {
+            "session.id": completedSession,
+            initialization_time_ms: initializationTime,
+            "protocol.version": sessionInfo.protocolVersion,
+          });
+
+          log.success(
+            `✅ Session ${completedSession} (${
+              sessionInfo.clientInfo?.name || "unknown"
+            }@${
+              sessionInfo.clientInfo?.version || "unknown"
+            }) initialized successfully (${initializationTime}ms). Protocol: ${
+              sessionInfo.protocolVersion
+            }`
+          );
+
+          // Remove from pending
+          this.pendingInitializations.delete(completedSession);
+
+          span.setStatus({
+            code: SpanStatusCode.OK,
+            message: "Initialization completed successfully",
+          });
+        } else {
+          log.warn(
+            "⚠️  oninitialized callback fired but no pending initialization found"
+          );
+          span.addEvent("session.not_found");
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "No pending initialization found",
+          });
+        }
+      } catch (error) {
+        span.addEvent("initialized.error", {
+          "error.message":
+            error instanceof Error ? error.message : String(error),
+        });
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        log.error("Error in oninitialized callback:", error);
+      } finally {
+        span.end();
+      }
+    };
+
     this.setupServerRequestHandlers();
   }
 
@@ -58,33 +162,52 @@ export class StreamableHTTPServer {
     return toolPermissions[toolName] || [];
   }
 
+  async validateProtocolVersion(req: Request) {
+    log.info("Validating protocol version...");
+
+    const protocolVersion =
+      req.body.params.protocolVersion ||
+      (req.headers["mcp-protocol-version"] as string);
+    if (!SUPPORTED_VERSIONS.includes(protocolVersion)) {
+      log.warn(`Protocol version "${protocolVersion}" is not supported.`);
+      return this.createRPCErrorResponse(
+        `Unsupported protocol version: ${protocolVersion}. Server supports: ${SUPPORTED_VERSIONS.join(
+          ", "
+        )}`
+      );
+    } else {
+      log.info(`Protocol version "${protocolVersion}" validated successfully.`);
+      return true;
+    }
+  }
+
   async close() {
     const tracer = trace.getTracer("mcp-server");
     const span = tracer.startSpan("server.close");
-    
+
     try {
       log.info("Closing MCP server...");
-      
+
       span.addEvent("server.closing_started");
-      
+
       const closeStart = Date.now();
       await this.server.close();
       const closeTime = Date.now() - closeStart;
-      
+
       span.setAttributes({
         "server.close_time_ms": closeTime,
         "server.close_success": true,
       });
-      
+
       span.addEvent("server.closed_successfully", {
-        "close_time_ms": closeTime,
+        close_time_ms: closeTime,
       });
-      
+
       span.setStatus({
         code: SpanStatusCode.OK,
         message: "Server closed successfully",
       });
-      
+
       log.success("MCP server closed successfully");
     } catch (error) {
       span.addEvent("server.close_error", {
@@ -268,13 +391,15 @@ export class StreamableHTTPServer {
           span.addEvent("authorization.denied", {
             "user.id": user.id,
             "tool.name": toolName,
-            "required_permissions": requiredPermissions.join(","),
+            required_permissions: requiredPermissions.join(","),
           });
           span.setStatus({
             code: SpanStatusCode.ERROR,
             message: "Insufficient permissions",
           });
-          log.warn(`User ${user.id} denied permission to call tool: ${toolName}`);
+          log.warn(
+            `User ${user.id} denied permission to call tool: ${toolName}`
+          );
           return this.createRPCErrorResponse(
             `Insufficient permissions to call tool: ${toolName}`
           );
@@ -296,8 +421,8 @@ export class StreamableHTTPServer {
         });
 
         span.addEvent("tool.execution_completed", {
-          "execution_time_ms": executionTime,
-          "result_content_items": result.content?.length || 0,
+          execution_time_ms: executionTime,
+          result_content_items: result.content?.length || 0,
         });
 
         span.setStatus({
@@ -315,7 +440,8 @@ export class StreamableHTTPServer {
         };
       } catch (error) {
         span.addEvent("tool.execution_error", {
-          "error.message": error instanceof Error ? error.message : String(error),
+          "error.message":
+            error instanceof Error ? error.message : String(error),
           "error.name": error instanceof Error ? error.name : "unknown",
         });
         span.setStatus({
@@ -355,21 +481,21 @@ export class StreamableHTTPServer {
   private async sendMessages() {
     const tracer = trace.getTracer("mcp-server");
     const span = tracer.startSpan("server.sendMessages");
-    
+
     try {
       const message: LoggingMessageNotification = {
         method: "notifications/message",
         params: { level: "info", data: "Connection established" },
       };
-      
+
       span.addEvent("message.created", {
         "message.method": message.method,
         "message.level": message.params.level,
       });
-      
+
       log.info("Sending connection established notification.");
       await this.sendNotification(message);
-      
+
       span.addEvent("message.sent_successfully");
       span.setStatus({
         code: SpanStatusCode.OK,
@@ -396,36 +522,36 @@ export class StreamableHTTPServer {
         "notification.method": notification.method,
       },
     });
-    
+
     try {
       const rpcNotificaiton: JSONRPCNotification = {
         ...notification,
         jsonrpc: JSON_RPC,
       };
-      
+
       span.setAttributes({
         "rpc.jsonrpc_version": JSON_RPC,
         "rpc.method": notification.method,
       });
-      
+
       span.addEvent("notification.sending", {
-        "method": notification.method,
+        method: notification.method,
       });
-      
+
       log.info(`Sending notification: ${notification.method}`);
       const startTime = Date.now();
       await this.server.notification(rpcNotificaiton);
       const sendTime = Date.now() - startTime;
-      
+
       span.setAttributes({
         "notification.send_time_ms": sendTime,
       });
-      
+
       span.addEvent("notification.sent", {
-        "method": notification.method,
-        "send_time_ms": sendTime,
+        method: notification.method,
+        send_time_ms: sendTime,
       });
-      
+
       span.setStatus({
         code: SpanStatusCode.OK,
         message: "Notification sent successfully",
