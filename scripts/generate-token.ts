@@ -27,12 +27,11 @@ import {
   USER_DETAILS_ADMIN_DEMO,
   USER_DETAILS_READONLY_DEMO,
   USER_DETAILS_USER_DEMO,
-} from "./user-details-demo";
-import { userInfo } from "node:os";
+} from "../src/auth/user-details-demo";
 
 // define dummy values for JWT_SECRET, JWT_EXPIRY, and PAYLOAD
 const JWT_SECRET = randomBytes(32).toString("base64");
-const JWT_EXPIRY = "6h";
+const JWT_EXPIRY = "48h";
 const JWT_AUDIENCE = "urn:foo";
 const JWT_ISSUER = "urn:bar";
 const USER_ROLE =

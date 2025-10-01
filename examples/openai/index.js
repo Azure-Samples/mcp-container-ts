@@ -3,7 +3,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   logLevel: "debug",
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.API_KEY,
 });
 
 try {
@@ -13,15 +13,19 @@ try {
       {
         type: "mcp",
         server_label: "todos",
-        server_description: "A local MCP server",
+        server_description: "A simple TODO MCP server to manage your todos",
         require_approval: "never",
         server_url: process.env.MCP_SERVER_URL,
-        authorization: process.env.MCP_OAUTH_ACCESS_TOKEN,
+        authorization: process.env.MCP_JWT_TOKEN,
       },
     ],
     input:
       "list my todos in my todos list. Always use the MCP tool to manage my todos.",
     // input: "add a todo to my todos list: 'Buy groceries'. Always use the MCP tool to manage my todos.",
+    // input: `I'd like to see a list of all my todos.`,
+    // input: `Please add a todo: "Learn about MCP"`,
+    // input: `Mark todo #1 as completed.`,
+    // input: `Delete todo #2.`,
   });
 
   console.log({ output: resp.output });

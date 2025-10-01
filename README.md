@@ -175,13 +175,13 @@ You should see the following output in the terminal:
   mcp:index 2025-07-23T16:48:05.449Z Press Ctrl+C to stop the server +0ms
 ```
 
-4. To access and use the MCP server, read the [Test your MCP server with desktop MCP Clients](#test-your-mcp-server-with-desktop-mcp-clients) section below.
+4. To access and use the MCP server, read the [Use your MCP server](#test-your-mcp-server-with-desktop-mcp-clients) section below.
 
 <br>
 
 > [!NOTE]
 > When the applications starts, the server will create an [in-memory SQLite](https://www.sqlite.org/inmemorydb.html) database. This database is used to store the state of the tools and their interactions with the MCP server.
-
+>
 
 ## Deploying the MCP Server to Azure Container Apps
 
@@ -222,7 +222,7 @@ azd up
 https://<env-name>.<container-id>.<region>.azurecontainerapps.io
 ```
 
-5. To access and use the MCP server, read the [Test your MCP server with desktop MCP Clients](#test-your-mcp-server-with-desktop-mcp-clients) section below.
+5. To access and use the MCP server, read the [Use your MCP server](#use-your-mcp-server) section below.
 
 
 > [!NOTE]
@@ -264,7 +264,11 @@ A related option is VS Code Dev Containers, which will open the project in your 
 4. Open a terminal window
 5. Continue with the next steps to either run the MCP server locally or deploy it to Azure Container Apps.
 
-## Test your MCP server with desktop MCP Clients
+## Use your MCP server
+
+### Option 0 - Use the provided Client examples
+
+This repository contains an example that demonstrates how to use the MCP server with OpenAI models. The example is located in the `[examples/](./examples/)` directory.
 
 ### Option 1 - Use the mcp.json file in VS Code
 

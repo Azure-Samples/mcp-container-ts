@@ -6,7 +6,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV='production' tsx src/index.ts",
     "host": "cross-env NODE_ENV='development' tsx --watch src/host.ts",
-    "generate-token": "tsx src/auth/generate-token.ts",
+    "generate-token": "tsx scripts/generate-token.ts",
+    "tunnel": "tsx scripts/tunnel.ts",
     "build": "tsc",
     "dev": "cross-env NODE_ENV='development' tsx watch src/index.ts",
     "inspect": "mcp-inspector --config ./mcp-inspector.json --server mcp-server"
@@ -64,6 +65,7 @@
     "@types/debug": "^4.1.12",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/localtunnel": "^2.0.4",
     "@types/node": "^24.5.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2"
