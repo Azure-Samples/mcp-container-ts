@@ -134,15 +134,15 @@ export const TodoTools = [
       const span = tracer.startSpan("list_todos");
 
       try {
-        const tools = await listTodos();
+        const todos = await listTodos();
 
         span.setAttributes({
-          "todos.count": tools.length,
-          "todos.completed_count": tools.filter((t) => t.completed).length,
-          "todos.pending_count": tools.filter((t) => !t.completed).length,
+          "todos.count": todos.length,
+          "todos.completed_count": todos.filter((t) => t.completed).length,
+          "todos.pending_count": todos.filter((t) => !t.completed).length,
         });
 
-        if (!tools || tools.length === 0) {
+        if (!todos || todos.length === 0) {
           span.addEvent("todos.empty_list");
           span.setStatus({
             code: SpanStatusCode.OK,
@@ -162,37 +162,27 @@ export const TodoTools = [
         }
 
         span.addEvent("todos.listed", {
-          count: tools.length,
-          completed: tools.filter((t) => t.completed).length,
+          count: todos.length,
+          completed: todos.filter((t) => t.completed).length,
         });
 
         span.setStatus({
           code: SpanStatusCode.OK,
-          message: `Listed ${tools.length} TODOs`,
+          message: `Listed ${todos.length} TODOs`,
         });
 
+        const structuredContent = {
+          todos,
+        };
+
         return {
-          content: tools.map((t) => {
-            return {
+          content: [
+            {
               type: "text",
-              text: JSON.stringify(
-                {
-                  id: t.id,
-                  text: t.text,
-                  completed: t.completed,
-                },
-                null,
-                2
-              ),
-            };
-          }),
-          structuredContent: {
-            todos: tools.map((t) => ({
-              id: t.id,
-              text: t.text,
-              completed: t.completed,
-            })),
-          },
+              text: JSON.stringify(structuredContent, null, 2),
+            },
+          ],
+          structuredContent,
         };
       } catch (error) {
         span.addEvent("todos.list_error", {
