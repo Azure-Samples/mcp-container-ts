@@ -6,7 +6,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV='production' tsx src/index.ts",
     "host": "cross-env NODE_ENV='development' tsx --watch src/host.ts",
-    "generate-token": "tsx scripts/generate-token.ts",
+    "generate-token": "tsx scripts/generate-token.ts --admin",
     "tunnel": "tsx scripts/tunnel.ts",
     "build": "tsc",
     "dev": "cross-env NODE_ENV='development' tsx watch src/index.ts",
