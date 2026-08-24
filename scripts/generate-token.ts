@@ -32,8 +32,8 @@ import {
 // define dummy values for JWT_SECRET, JWT_EXPIRY, and PAYLOAD
 const JWT_SECRET = randomBytes(32).toString("base64");
 const JWT_EXPIRY = "48h";
-const JWT_AUDIENCE = "urn:foo";
-const JWT_ISSUER = "urn:bar";
+const JWT_AUDIENCE = "urn:bar";
+const JWT_ISSUER = "urn:foo";
 const USER_ROLE =
   process.argv[2] === "--admin"
     ? USER_DETAILS_ADMIN_DEMO
@@ -41,14 +41,14 @@ const USER_ROLE =
     ? USER_DETAILS_USER_DEMO
     : USER_DETAILS_READONLY_DEMO;
 const PAYLOAD = {
-  issuer: JWT_ISSUER,
-  audience: JWT_AUDIENCE,
   ...USER_ROLE,
 };
 
 const JWT_TOKEN = jwt.sign(PAYLOAD, JWT_SECRET, {
   algorithm: "HS256",
   expiresIn: JWT_EXPIRY,
+  issuer: JWT_ISSUER,
+  audience: JWT_AUDIENCE,
 });
 
 // Define JWT variables to update

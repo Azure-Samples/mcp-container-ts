@@ -19,6 +19,7 @@ import {
 } from "@opentelemetry/api";
 import { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   AuthenticatedUser,
   hasPermission,
@@ -34,7 +35,10 @@ const SUPPORTED_VERSIONS = ["2025-03-26", "2025-06-18"];
 
 export class StreamableHTTPServer {
   server: Server;
-  private currentUser: AuthenticatedUser | null = null;
+  // Per-request authenticated identity. Stored in AsyncLocalStorage instead of
+  // a shared instance field so concurrent /mcp requests cannot overwrite each
+  // other's identity (which previously allowed cross-user RBAC confusion).
+  private userContext = new AsyncLocalStorage<AuthenticatedUser | null>();
   private pendingInitializations = new Map<
     string,
     {
@@ -230,40 +234,43 @@ export class StreamableHTTPServer {
       req.body || "{}"
     );
 
-    // Extract user from request (set by authentication middleware)
-    this.currentUser = (req as any).user as AuthenticatedUser;
+    // Extract user from request (set by authentication middleware) and bind it
+    // to this request's async context so the tool handlers read the correct
+    // identity even when other requests run concurrently.
+    const user = (req as any).user as AuthenticatedUser;
 
-    try {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
+    await this.userContext.run(user ?? null, async () => {
+      try {
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+        });
 
-      log.info("Connecting transport to server...");
+        log.info("Connecting transport to server...");
 
-      await this.server.connect(transport);
-      log.success("Transport connected. Handling request...");
+        await this.server.connect(transport);
+        log.success("Transport connected. Handling request...");
 
-      await transport.handleRequest(req, res, req.body);
-      res.on("close", () => {
-        log.success("Request closed by client");
-        transport.close();
-        this.server.close();
-        this.currentUser = null; // Clear user after request
-      });
+        await transport.handleRequest(req, res, req.body);
+        res.on("close", () => {
+          log.success("Request closed by client");
+          transport.close();
+          this.server.close();
+        });
 
-      await this.sendMessages();
-      log.success(
-        `${req.method} request handled successfully (status=${res.statusCode})`
-      );
-    } catch (error) {
-      log.error("Error handling MCP request:", error);
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json(this.createRPCErrorResponse("Internal server error."));
-        log.error("Responded with 500 Internal Server Error");
+        await this.sendMessages();
+        log.success(
+          `${req.method} request handled successfully (status=${res.statusCode})`
+        );
+      } catch (error) {
+        log.error("Error handling MCP request:", error);
+        if (!res.headersSent) {
+          res
+            .status(500)
+            .json(this.createRPCErrorResponse("Internal server error."));
+          log.error("Responded with 500 Internal Server Error");
+        }
       }
-    }
+    });
   }
 
   private listTools(parentSpan: Span, trace: TraceAPI, context: ContextAPI) {
@@ -271,7 +278,7 @@ export class StreamableHTTPServer {
     const tracer = trace.getTracer("mcp-server");
     const span = tracer.startSpan("listTools", undefined, ctx);
 
-    const user = this.currentUser;
+    const user = this.userContext.getStore() ?? null;
     span.setAttribute("user.id", user?.id || "anonymous");
     span.setAttribute("user.role", user?.role || "none");
 
@@ -335,7 +342,7 @@ export class StreamableHTTPServer {
 
       const args = request.params.arguments;
       const toolName = request.params.name;
-      const user = this.currentUser;
+      const user = this.userContext.getStore() ?? null;
       const tool = TodoTools.find((tool) => tool.name === toolName);
 
       // Add user context to span
