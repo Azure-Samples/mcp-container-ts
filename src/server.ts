@@ -266,8 +266,8 @@ export class StreamableHTTPServer {
         res.on("close", () => {
           log.success("Request closed by client");
           this.activeServers.delete(server);
-          transport.close();
-          server.close();
+          transport.close().catch(() => {});
+          server.close().catch(() => {});
         });
 
         await this.sendMessages(server);
