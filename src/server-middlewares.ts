@@ -70,7 +70,9 @@ const rateLimiterMiddleware = rateLimit({
       span.end();
     }
 
-    next();
+    // Do NOT call next(): the request exceeded the rate limit and a 429 has
+    // already been sent. Calling next() here would forward the blocked request
+    // to the MCP route and execute it anyway, defeating the rate limiter.
   },
 });
 

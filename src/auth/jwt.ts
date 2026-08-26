@@ -31,12 +31,13 @@ export class JWTService {
     }
 
     try {
-      const {payload} = jwt.verify(token, Buffer.from(this.SECRET, "utf-8"), {
-        iss: this.ISSUER,
-        aud: this.AUDIENCE,
-        algorithm: "HS256",
+      const decoded = jwt.verify(token, Buffer.from(this.SECRET, "utf-8"), {
+        issuer: this.ISSUER,
+        audience: this.AUDIENCE,
+        algorithms: ["HS256"],
         complete: true,
-      } as any) as { payload: jwt.JwtPayload };
+      }) as jwt.Jwt;
+      const payload = decoded.payload as jwt.JwtPayload;
 
       return {
         id: payload.id,
