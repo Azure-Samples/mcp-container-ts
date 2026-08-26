@@ -34,7 +34,11 @@ const JSON_RPC_ERROR = -32603;
 const SUPPORTED_VERSIONS = ["2025-03-26", "2025-06-18"];
 
 export class StreamableHTTPServer {
-  server: Server;
+  // MCP `Server` instances are not reusable across transports: connecting a
+  // server that is already attached to a transport throws. A fresh server is
+  // therefore created for every stateless request and tracked here so it can
+  // be closed on shutdown.
+  private activeServers = new Set<Server>();
   // Per-request authenticated identity. Stored in AsyncLocalStorage instead of
   // a shared instance field so concurrent /mcp requests cannot overwrite each
   // other's identity (which previously allowed cross-user RBAC confusion).
@@ -50,8 +54,8 @@ export class StreamableHTTPServer {
     }
   >();
 
-  constructor() {
-    this.server = new Server(
+  private createServer(): Server {
+    const server = new Server(
       {
         name: "todo-http-server",
         version: "1.0.0",
@@ -67,7 +71,7 @@ export class StreamableHTTPServer {
     );
 
     // Set up the oninitialized callback
-    this.server.oninitialized = () => {
+    server.oninitialized = () => {
       const tracer = trace.getTracer("mcp-server");
       const span = tracer.startSpan("server.oninitialized");
 
@@ -151,7 +155,9 @@ export class StreamableHTTPServer {
       }
     };
 
-    this.setupServerRequestHandlers();
+    this.setupServerRequestHandlers(server);
+    this.activeServers.add(server);
+    return server;
   }
 
   private getToolRequiredPermissions(toolName: string): Permission[] {
@@ -195,7 +201,9 @@ export class StreamableHTTPServer {
       span.addEvent("server.closing_started");
 
       const closeStart = Date.now();
-      await this.server.close();
+      const servers = [...this.activeServers];
+      this.activeServers.clear();
+      await Promise.all(servers.map((server) => server.close()));
       const closeTime = Date.now() - closeStart;
 
       span.setAttributes({
@@ -240,29 +248,37 @@ export class StreamableHTTPServer {
     const user = (req as any).user as AuthenticatedUser;
 
     await this.userContext.run(user ?? null, async () => {
-      try {
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-        });
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
 
+      // Each request gets its own MCP server instance so that concurrent
+      // requests never share (or reconnect) a single server/transport pair.
+      const server = this.createServer();
+
+      try {
         log.info("Connecting transport to server...");
 
-        await this.server.connect(transport);
+        await server.connect(transport);
         log.success("Transport connected. Handling request...");
 
         await transport.handleRequest(req, res, req.body);
         res.on("close", () => {
           log.success("Request closed by client");
+          this.activeServers.delete(server);
           transport.close();
-          this.server.close();
+          server.close();
         });
 
-        await this.sendMessages();
+        await this.sendMessages(server);
         log.success(
           `${req.method} request handled successfully (status=${res.statusCode})`
         );
       } catch (error) {
         log.error("Error handling MCP request:", error);
+        this.activeServers.delete(server);
+        await transport.close().catch(() => {});
+        await server.close().catch(() => {});
         if (!res.headersSent) {
           res
             .status(500)
@@ -324,14 +340,14 @@ export class StreamableHTTPServer {
     };
   }
 
-  private setupServerRequestHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async (request) => {
+  private setupServerRequestHandlers(server: Server) {
+    server.setRequestHandler(ListToolsRequestSchema, async (request) => {
       const tracer = trace.getTracer("mcp-server");
       const parentSpan = tracer.startSpan("main");
       return this.listTools(parentSpan, trace, context);
     });
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const tracer = trace.getTracer("mcp-server");
       const span = tracer.startSpan("callTool", {
         attributes: {
@@ -467,12 +483,12 @@ export class StreamableHTTPServer {
       }
     });
 
-    this.server.setRequestHandler(SetLevelRequestSchema, async (request) => {
+    server.setRequestHandler(SetLevelRequestSchema, async (request) => {
       const { level } = request.params;
       log.info(`Setting log level to: ${level}`);
 
       // Demonstrate different log levels
-      await this.server.notification({
+      await server.notification({
         method: "notifications/message",
         params: {
           level: "debug",
@@ -485,7 +501,7 @@ export class StreamableHTTPServer {
     });
   }
 
-  private async sendMessages() {
+  private async sendMessages(server: Server) {
     const tracer = trace.getTracer("mcp-server");
     const span = tracer.startSpan("server.sendMessages");
 
@@ -501,7 +517,7 @@ export class StreamableHTTPServer {
       });
 
       log.info("Sending connection established notification.");
-      await this.sendNotification(message);
+      await this.sendNotification(server, message);
 
       span.addEvent("message.sent_successfully");
       span.setStatus({
@@ -522,7 +538,7 @@ export class StreamableHTTPServer {
     }
   }
 
-  private async sendNotification(notification: Notification) {
+  private async sendNotification(server: Server, notification: Notification) {
     const tracer = trace.getTracer("mcp-server");
     const span = tracer.startSpan("server.sendNotification", {
       attributes: {
@@ -547,7 +563,7 @@ export class StreamableHTTPServer {
 
       log.info(`Sending notification: ${notification.method}`);
       const startTime = Date.now();
-      await this.server.notification(rpcNotificaiton);
+      await server.notification(rpcNotificaiton);
       const sendTime = Date.now() - startTime;
 
       span.setAttributes({
